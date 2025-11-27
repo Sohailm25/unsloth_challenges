@@ -156,35 +156,7 @@ from triton import jit
 import triton
 import triton.language as tl
 
-_NF4_LUT_VALUES = [
-    -1.0,
-    -0.6961928009986877,
-    -0.5250730514526367,
-    -0.39491748809814453,
-    -0.28444138169288635,
-    -0.18477343022823334,
-    -0.09105003625154495,
-    0.0,
-    0.07958029955625534,
-    0.16093020141124725,
-    0.24611230194568634,
-    0.33791524171829224,
-    0.44070982933044434,
-    0.5626170039176941,
-    0.7229568362236023,
-    1.0,
-]
-
-_NF4_LUT = torch.tensor(_NF4_LUT_VALUES, dtype=torch.float32)
 _NF4_LUT_CACHE = {}
-
-
-def _nf4_lut_for(device):
-    cached = _NF4_LUT_CACHE.get(device)
-    if cached is None or cached.device != device:
-        cached = _NF4_LUT.to(device)
-        _NF4_LUT_CACHE[device] = cached
-    return cached
 
 
 def _is_power_of_two(value):
@@ -195,22 +167,31 @@ def _compute_shift_offsets(weight, quant_state):
     n_weights = weight.numel() * 2
     absmax = quant_state.absmax
     state2 = getattr(quant_state, "state2", None)
-    if state2 is None:
-        return None
-    if absmax is None or state2.absmax is None:
+    if state2 is None or absmax is None or state2.absmax is None:
         return None
     if absmax.numel() == 0 or state2.absmax.numel() == 0:
         return None
 
-    ratio1 = n_weights // absmax.numel()
-    if ratio1 * absmax.numel() != n_weights or not _is_power_of_two(ratio1):
+    # bytes per absmax = blocksize / 2
+    blocksize = int(getattr(quant_state, "blocksize", 0))
+    if blocksize <= 0 or blocksize % 2 != 0:
+        return None
+    bytes_per_absmax = blocksize // 2
+    n_absmax = absmax.numel()
+    expected_absmax = math.ceil(n_weights / blocksize)
+    if expected_absmax != n_absmax:
+        return None
+    if not _is_power_of_two(bytes_per_absmax):
         return None
 
-    ratio2 = absmax.numel() // state2.absmax.numel()
-    if ratio2 * state2.absmax.numel() != absmax.numel() or not _is_power_of_two(ratio2):
+    blocksize2 = int(getattr(state2, "blocksize", 0))
+    if blocksize2 <= 0 or not _is_power_of_two(blocksize2):
+        return None
+    expected_absmax2 = math.ceil(n_absmax / blocksize2)
+    if expected_absmax2 != state2.absmax.numel():
         return None
 
-    return int(math.log2(ratio1)), int(math.log2(ratio2))
+    return int(math.log2(bytes_per_absmax)), int(math.log2(blocksize2))
 
 
 def _get_output_shape(quant_state, weight):
@@ -248,8 +229,8 @@ def _your_dequantize_nf4_kernel(
     out_ptr,
     offset_ptr,
     n_packed,
-    offset1,
-    offset2,
+    shift_absmax_bytes,
+    shift_absmax2,
     OUT_DTYPE: tl.constexpr,
     USE_CUSTOM_ASM: tl.constexpr,
     USE_CACHE_EVICT: tl.constexpr,
@@ -286,8 +267,8 @@ def _your_dequantize_nf4_kernel(
         hi = packed >> 4
 
     weight_pos = offs * 2
-    absmax_idx = weight_pos >> offset1
-    absmax2_idx = absmax_idx >> offset2
+    absmax_idx = offs >> shift_absmax_bytes
+    absmax2_idx = absmax_idx >> shift_absmax2
 
     offset = tl.load(offset_ptr).to(tl.float32)
     absmax_quant = tl.load(absmax_ptr + absmax_idx, mask=mask, other=0)
@@ -340,7 +321,7 @@ def _your_dequantize_nf4(
     absmax = _ensure_tensor(quant_state.absmax, device, torch.uint8)
     absmax2 = _ensure_tensor(quant_state.state2.absmax, device, torch.float32)
     code2 = _ensure_tensor(quant_state.state2.code, device, torch.float32)
-    lut = _nf4_lut_for(device)
+    lut = _ensure_tensor(quant_state.code, device, torch.float32)
     evict = (
         torch.empty_like(weight_flat)
         if use_cache_eviction
