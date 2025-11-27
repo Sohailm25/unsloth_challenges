@@ -246,7 +246,7 @@ def _your_dequantize_nf4_kernel(
     lut_ptr,
     evict_ptr,
     out_ptr,
-    offset,
+    offset_ptr,
     n_packed,
     offset1,
     offset2,
@@ -289,6 +289,7 @@ def _your_dequantize_nf4_kernel(
     absmax_idx = weight_pos >> offset1
     absmax2_idx = absmax_idx >> offset2
 
+    offset = tl.load(offset_ptr).to(tl.float32)
     absmax_quant = tl.load(absmax_ptr + absmax_idx, mask=mask, other=0)
     code_val = tl.load(code2_ptr + absmax_quant, mask=mask, other=0).to(tl.float32)
     scale = tl.load(absmax2_ptr + absmax2_idx, mask=mask, other=1.0).to(tl.float32)
