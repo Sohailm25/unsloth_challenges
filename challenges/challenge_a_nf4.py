@@ -332,16 +332,17 @@ def _your_dequantize_nf4(
 
     n_packed = weight_flat.numel()
     n_weights = math.prod(quant_state.shape)
-    out_flat = torch.empty(n_weights, device=device, dtype=dtype)
+    out_storage_dtype = dtype
+    emulate_bf16 = False
+    out_dtype = _OUT_DTYPE_MAP[dtype]
+    if dtype == torch.bfloat16 and major_version < 8:
+        emulate_bf16 = True
+        out_storage_dtype = torch.float16
+        out_dtype = tl.float16
+
+    out_flat = torch.empty(n_weights, device=device, dtype=out_storage_dtype)
 
     grid = lambda meta: (triton.cdiv(n_packed, meta["BLOCK_SIZE"]),)
-
-    out_dtype = _OUT_DTYPE_MAP[dtype]
-    emulate_bf16 = False
-    if dtype == torch.bfloat16 and major_version < 8:
-        # T4 lacks native bf16; compute in f16 and cast after.
-        out_dtype = tl.float16
-        emulate_bf16 = True
 
     _your_dequantize_nf4_kernel[grid](
         weight_flat,
