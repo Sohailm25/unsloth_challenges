@@ -382,7 +382,7 @@ def _debug_dequant_single_block(weight):
     n_weights = qs.shape.numel()
     n_bytes = math.ceil(n_weights / 2)
     # Take first byte block
-    weight_flat = weight.weight.data.contiguous()
+    weight_flat = weight.weight.data.flatten().contiguous()
     packed_slice = weight_flat[:block_bytes]
 
     # Host reference reconstruction for that block
