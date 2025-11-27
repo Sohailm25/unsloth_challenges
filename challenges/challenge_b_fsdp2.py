@@ -28,6 +28,7 @@
 
 # HELPFUL functions to undo Unsloth patches:
 import sys
+import torch
 
 def remove_patched_module(package_name):
     modules_to_delete = [
