@@ -269,8 +269,9 @@ def _your_dequantize_nf4_kernel(
 
     packed = tl.load(weight_ptr + offs, mask=mask, other=0).to(tl.uint32)
 
-    if USE_CUSTOM_ASM:
-        hi, lo = tl.asm(
+    asm_fn = getattr(tl, "asm", None)
+    if USE_CUSTOM_ASM and asm_fn is not None:
+        hi, lo = asm_fn(
             "{\n"
             " .reg .u32 tmp;\n"
             " mov.b32 tmp, $2;\n"
