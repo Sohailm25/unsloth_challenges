@@ -22,9 +22,9 @@ app = modal.App("nf4-challenge")
 
 @app.function(
     image=image,
-    gpu=modal.gpu.T4(),
+    gpu="T4",
     timeout=900,
-    mounts=[modal.mounts.Mount.from_local_dir(".", "/workspace", recursive=True)],
+    mounts=[modal.Mount.from_local_dir(".", "/workspace", recursive=True)],
 )
 def run_tests():
     import os
@@ -40,9 +40,9 @@ def run_tests():
 
 @app.function(
     image=image,
-    gpu=modal.gpu.T4(),
+    gpu="T4",
     timeout=900,
-    mounts=[modal.mounts.Mount.from_local_dir(".", "/workspace", recursive=True)],
+    mounts=[modal.Mount.from_local_dir(".", "/workspace", recursive=True)],
 )
 def run_benchmarks():
     import os
@@ -59,4 +59,3 @@ def run_benchmarks():
     new_time = test_dequantize(your_dequantize_nf4)
     torch.cuda.synchronize()
     print({"ref_time": ref_time, "new_time": new_time, "speedup": ref_time / new_time})
-
