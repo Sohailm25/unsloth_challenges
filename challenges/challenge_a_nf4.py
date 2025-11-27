@@ -387,7 +387,7 @@ def _debug_dequant_single_block(weight):
 
     # Host reference reconstruction for that block
     code_lut = qs.code.to(torch.float32)
-    absmax_codes = qs.absmax.to(torch.uint8)
+    absmax_codes = qs.absmax.to(torch.int64)
     code2 = qs.state2.code.to(torch.float32)
     absmax2 = qs.state2.absmax.to(torch.float32)
     offset = torch.tensor(float(qs.offset), device=weight_flat.device, dtype=torch.float32)
