@@ -39,6 +39,7 @@ def debug_block():
     print("absmax_codes:", info["absmax_codes"][:8])
     print("absmax2:", info["absmax2"][:8])
     print("offset:", info["offset"])
+    print("n_weights:", info["n_weights"], "n_bytes:", info["n_bytes"], "blocksize:", info["blocksize"], "blocksize2:", info["blocksize2"])
     print("host_out first 8:", info["host_out"][:8])
     print("kernel_out first 8:", info["kernel_out"][:8])
     diff = (info["host_out"][:128] - info["kernel_out"][:128]).abs()
