@@ -207,6 +207,15 @@ def _ensure_tensor(tensor, device, dtype=None):
     return target.contiguous()
 
 
+@triton.autotune(
+    configs=[
+        triton.Config({"BLOCK_SIZE": 256}, num_warps=4, num_stages=2),
+        triton.Config({"BLOCK_SIZE": 512}, num_warps=4, num_stages=2),
+        triton.Config({"BLOCK_SIZE": 512}, num_warps=8, num_stages=3),
+        triton.Config({"BLOCK_SIZE": 1024}, num_warps=8, num_stages=3),
+    ],
+    key=["n_packed"],
+)
 @triton.jit
 def _your_dequantize_nf4_kernel(
     weight_ptr,
@@ -261,24 +270,24 @@ def _your_dequantize_nf4_kernel(
     absmax2_idx = absmax_idx >> shift_absmax2
 
     offset = tl.load(offset_ptr).to(tl.float32)
-    absmax_quant = tl.load(absmax_ptr + absmax_idx, mask=mask, other=0)
-    code_val = tl.load(code2_ptr + absmax_quant.to(tl.int32), mask=mask, other=0).to(tl.float32)
+    absmax_quant = tl.load(absmax_ptr + absmax_idx, mask=mask, other=0).to(tl.int32)
+    code_val = tl.load(code2_ptr + absmax_quant, mask=mask, other=0).to(tl.float32)
     scale = tl.load(absmax2_ptr + absmax2_idx, mask=mask, other=1.0).to(tl.float32)
-    absmax = code_val * scale + offset
+    fma = getattr(tl, "fma", None)
+    absmax = fma(code_val, scale, offset) if fma is not None else code_val * scale + offset
 
     w_hi = tl.load(lut_ptr + hi.to(tl.int32), mask=mask, other=0.0)
     w_lo = tl.load(lut_ptr + lo.to(tl.int32), mask=mask, other=0.0)
     w_hi = w_hi * absmax
     w_lo = w_lo * absmax
 
-    base_out = pid * 2 * BLOCK_SIZE
-    hi_offs = base_out + 2 * tl.arange(0, BLOCK_SIZE)
-    lo_offs = hi_offs + 1
-    valid = mask
-    out_mask_hi = valid & (hi_offs < n_weights)
-    out_mask_lo = valid & (lo_offs < n_weights)
-    tl.store(out_ptr + hi_offs, w_hi.to(OUT_DTYPE), mask=out_mask_hi)
-    tl.store(out_ptr + lo_offs, w_lo.to(OUT_DTYPE), mask=out_mask_lo)
+    offs2 = tl.arange(0, 2 * BLOCK_SIZE)
+    hi_idx = offs2 // 2
+    is_hi = (offs2 & 1) == 0
+    interleaved = tl.where(is_hi, w_hi[hi_idx], w_lo[hi_idx])
+    out_offs = pid * 2 * BLOCK_SIZE + offs2
+    out_mask = out_offs < n_weights
+    tl.store(out_ptr + out_offs, interleaved.to(OUT_DTYPE), mask=out_mask)
 
 
 _OUT_DTYPE_MAP = {
