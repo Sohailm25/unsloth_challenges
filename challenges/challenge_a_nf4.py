@@ -89,12 +89,11 @@ class MLP(nn.Module):
         return self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))
 
 def mlp_forward(X, mlp, fx):
-    x32 = X.to(torch.float32)
-    up   = x32 @ fx(mlp.  up_proj).to(torch.float32).t()
-    gate = x32 @ fx(mlp.gate_proj).to(torch.float32).t()
+    up   = X @ fx(mlp.  up_proj).t()
+    gate = X @ fx(mlp.gate_proj).t()
     h = mlp.act_fn(gate) * up
-    down = h @ fx(mlp.down_proj).to(torch.float32).t()
-    return down.to(X.dtype)
+    down = h @ fx(mlp.down_proj).t()
+    return down
 
 def mlp_dequantize(X, mlp, fx):
     a = fx(mlp.  up_proj).t(); torch.cuda.synchronize()
