@@ -141,15 +141,8 @@ def test_dequantize(dequantize_fx):
 from unsloth.kernels.utils import fast_dequantize
 def unsloth_dequantize(weight):
     return fast_dequantize(weight.weight, weight.weight.quant_state)
-test_dequantize(unsloth_dequantize)
-
-"""The elapsed time for our implementation over 1000 trials is 5.38 seconds or so.
-
-PEFT also has one, which should be mostly identical to Unsloth's version, albeit slightly slower.
-"""
 
 from peft.utils.integrations import dequantize_module_weight as peft_dequantize
-test_dequantize(peft_dequantize)
 
 """Write your Triton kernel below, and test it:"""
 
@@ -443,11 +436,9 @@ def _debug_dequant_single_block(weight):
         "blocksize2": qs.state2.blocksize,
     }
 
-### TEST IT BELOW:
-# test_dequantize(your_dequantize_nf4)
-
-### CALCULATE SPEEDUP (hopefully 1.15x faster or more)
-# test_dequantize(unsloth_dequantize) / test_dequantize(your_dequantize_nf4)
+if __name__ == "__main__":
+    # test_dequantize(your_dequantize_nf4)
+    pass
 
 """## Marking Criteria for A) Max points = 14
 ```python
