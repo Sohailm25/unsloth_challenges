@@ -300,14 +300,13 @@ def _your_dequantize_nf4_kernel(
     w_hi = w_hi * absmax
     w_lo = w_lo * absmax
 
-    offs2 = tl.arange(0, 2 * BLOCK_SIZE)
-    idx = offs2 // 2
-    is_hi = (offs2 % 2) == 0
-    tile = tl.where(is_hi, w_hi[idx], w_lo[idx])
-
-    out_offs = pid * 2 * BLOCK_SIZE + offs2
-    out_mask = out_offs < (n_packed * 2)
-    tl.store(out_ptr + out_offs, tile.to(OUT_DTYPE), mask=out_mask)
+    base_out = pid * 2 * BLOCK_SIZE
+    hi_offs = base_out + 2 * tl.arange(0, BLOCK_SIZE)
+    lo_offs = hi_offs + 1
+    out_mask_hi = hi_offs < (n_packed * 2)
+    out_mask_lo = lo_offs < (n_packed * 2)
+    tl.store(out_ptr + hi_offs, w_hi.to(OUT_DTYPE), mask=out_mask_hi)
+    tl.store(out_ptr + lo_offs, w_lo.to(OUT_DTYPE), mask=out_mask_lo)
 
 
 _OUT_DTYPE_MAP = {
