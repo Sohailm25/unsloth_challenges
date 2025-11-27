@@ -49,7 +49,10 @@ os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
 
 from bitsandbytes.nn import Linear4bit
 from transformers.activations import ACT2FN
-from unsloth.kernels.utils import fast_dequantize
+try:
+    from unsloth.kernels.utils import fast_dequantize  # type: ignore
+except Exception:  # noqa: BLE001
+    from peft.utils.integrations import dequantize_module_weight as fast_dequantize
 from peft.utils.integrations import dequantize_module_weight as peft_dequantize
 def unsloth_dequantize(weight):
     return fast_dequantize(weight.weight, weight.weight.quant_state)
@@ -89,8 +92,11 @@ class MLP(nn.Module):
         return self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))
 
 def mlp_forward(X, mlp, fx):
-    # Use the module's forward for exact parity with Linear4bit kernels.
-    return mlp(X)
+    up   = X @ fx(mlp.  up_proj).t()
+    gate = X @ fx(mlp.gate_proj).t()
+    h = mlp.act_fn(gate) * up
+    down = h @ fx(mlp.down_proj).t()
+    return down
 
 def mlp_dequantize(X, mlp, fx):
     a = fx(mlp.  up_proj).t(); torch.cuda.synchronize()

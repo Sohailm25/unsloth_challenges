@@ -8,13 +8,12 @@ image = (
     modal.Image.from_registry("pytorch/pytorch:2.3.1-cuda12.1-cudnn8-runtime")
     .apt_install("build-essential")
     .pip_install(
-        "torch==2.3.0",
-        "triton==2.3.0",
-        "bitsandbytes==0.43.1",
+        "torch==2.4.0",
+        "triton==3.0.0",
+        "bitsandbytes==0.44.0",
         "transformers>=4.41.0",
         "peft>=0.11.0",
-        "unsloth",
-        "xformers==0.0.26.post1",
+        "xformers==0.0.27.post2",
         "trl<0.9.0",
         "pytest",
     )
