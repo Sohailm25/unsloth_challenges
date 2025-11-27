@@ -349,6 +349,7 @@ def _your_dequantize_nf4(
         n_weights,
         offset1,
         offset2,
+        BLOCK_SIZE=256,
         OUT_DTYPE=_OUT_DTYPE_MAP[dtype],
         USE_CUSTOM_ASM=use_custom_asm,
         USE_CACHE_EVICT=use_cache_eviction,
