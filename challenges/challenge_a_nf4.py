@@ -8,6 +8,7 @@ from transformers import set_seed
 import time
 import inspect
 import os
+import math
 major_version, minor_version = torch.cuda.get_device_capability()
 HAS_BFLOAT16 = (major_version >= 8)
 from inspect import currentframe as _C, getframeinfo
@@ -36,7 +37,6 @@ os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
 <a name="NF4"></a>
 ## A) Convert `nf4` to Triton. [Difficulty: Hard] [Max points: 14]
 
-# We have closed the challenges - thank you for your interest!
 
 1. Goal: Convert a `nf4` quantized tensor into `fp16` or `bf16` into a *single* Triton kernel The double dequant of the `absmax` and weight forming must be done in 1 Triton kernel. Must work on Tesla T4.
 2. Must be faster than Unsloth's `fast_dequantize` by 1.15x or more, and not use large intermediate memory buffers.
@@ -156,17 +156,237 @@ from triton import jit
 import triton
 import triton.language as tl
 
+_NF4_LUT_VALUES = [
+    -1.0,
+    -0.6961928009986877,
+    -0.5250730514526367,
+    -0.39491748809814453,
+    -0.28444138169288635,
+    -0.18477343022823334,
+    -0.09105003625154495,
+    0.0,
+    0.07958029955625534,
+    0.16093020141124725,
+    0.24611230194568634,
+    0.33791524171829224,
+    0.44070982933044434,
+    0.5626170039176941,
+    0.7229568362236023,
+    1.0,
+]
+
+_NF4_LUT = torch.tensor(_NF4_LUT_VALUES, dtype=torch.float32)
+_NF4_LUT_CACHE = {}
+
+
+def _nf4_lut_for(device):
+    cached = _NF4_LUT_CACHE.get(device)
+    if cached is None or cached.device != device:
+        cached = _NF4_LUT.to(device)
+        _NF4_LUT_CACHE[device] = cached
+    return cached
+
+
+def _is_power_of_two(value):
+    return value > 0 and (value & (value - 1)) == 0
+
+
+def _compute_shift_offsets(weight, quant_state):
+    n_weights = weight.numel() * 2
+    absmax = quant_state.absmax
+    state2 = getattr(quant_state, "state2", None)
+    if state2 is None:
+        return None
+    if absmax is None or state2.absmax is None:
+        return None
+    if absmax.numel() == 0 or state2.absmax.numel() == 0:
+        return None
+
+    ratio1 = n_weights // absmax.numel()
+    if ratio1 * absmax.numel() != n_weights or not _is_power_of_two(ratio1):
+        return None
+
+    ratio2 = absmax.numel() // state2.absmax.numel()
+    if ratio2 * state2.absmax.numel() != absmax.numel() or not _is_power_of_two(ratio2):
+        return None
+
+    return int(math.log2(ratio1)), int(math.log2(ratio2))
+
+
+def _get_output_shape(quant_state, weight):
+    if hasattr(quant_state, "shape"):
+        return tuple(quant_state.shape)
+    if hasattr(quant_state, "weight_shape"):
+        return tuple(quant_state.weight_shape)
+    return (weight.numel() * 2,)
+
+
+def _ensure_tensor(tensor, device, dtype=None):
+    target = tensor.to(device)
+    if dtype is not None:
+        target = target.to(dtype)
+    return target.contiguous()
+
+
+@triton.autotune(
+    configs=[
+        triton.Config({"BLOCK_SIZE": 256}, num_warps=4, num_stages=2),
+        triton.Config({"BLOCK_SIZE": 512}, num_warps=4, num_stages=2),
+        triton.Config({"BLOCK_SIZE": 512}, num_warps=8, num_stages=3),
+        triton.Config({"BLOCK_SIZE": 1024}, num_warps=8, num_stages=3),
+    ],
+    key=["n_packed"],
+)
 @triton.jit
-def _your_dequantize_nf4_kernel():
-    ### TRITON CODE GOES HERE
-    return
+def _your_dequantize_nf4_kernel(
+    weight_ptr,
+    absmax_ptr,
+    absmax2_ptr,
+    code2_ptr,
+    lut_ptr,
+    evict_ptr,
+    out_ptr,
+    offset,
+    n_packed,
+    offset1,
+    offset2,
+    OUT_DTYPE: tl.constexpr,
+    USE_CUSTOM_ASM: tl.constexpr,
+    USE_CACHE_EVICT: tl.constexpr,
+    BLOCK_SIZE: tl.constexpr,
+):
+    pid = tl.program_id(0)
+    offs = pid * BLOCK_SIZE + tl.arange(0, BLOCK_SIZE)
+    mask = offs < n_packed
 
-def _your_dequantize_nf4(weight, quant_state):
-    ### SETUP TRITON LAUNCH HERE
-    return None
+    if USE_CACHE_EVICT:
+        _ = tl.load(
+            evict_ptr + offs,
+            mask=mask,
+            other=0,
+            eviction_policy="evict_last",
+        )
 
-def your_dequantize_nf4(weight):
-    return _your_dequantize_nf4(weight.weight.data, weight.weight.quant_state)
+    packed = tl.load(weight_ptr + offs, mask=mask, other=0).to(tl.uint32)
+
+    if USE_CUSTOM_ASM:
+        hi, lo = tl.asm(
+            "{\n"
+            " .reg .u32 tmp;\n"
+            " mov.b32 tmp, $2;\n"
+            " and.b32 $1, tmp, 0x0f;\n"
+            " shr.u32 $0, tmp, 4;\n"
+            "}\n",
+            outputs=[("=r", tl.uint32), ("=r", tl.uint32)],
+            inputs=[("r", packed)],
+        )
+    else:
+        lo = packed & 0x0F
+        hi = packed >> 4
+
+    weight_pos = offs * 2
+    absmax_idx = weight_pos >> offset1
+    absmax2_idx = absmax_idx >> offset2
+
+    absmax_quant = tl.load(absmax_ptr + absmax_idx, mask=mask, other=0)
+    code_val = tl.load(code2_ptr + absmax_quant, mask=mask, other=0).to(tl.float32)
+    scale = tl.load(absmax2_ptr + absmax2_idx, mask=mask, other=1.0).to(tl.float32)
+    absmax = tl.fma(code_val, scale, offset)
+
+    w_hi = tl.load(lut_ptr + hi, mask=mask, other=0.0)
+    w_lo = tl.load(lut_ptr + lo, mask=mask, other=0.0)
+    w_hi = w_hi * absmax
+    w_lo = w_lo * absmax
+
+    offs2 = tl.arange(0, 2 * BLOCK_SIZE)
+    idx = offs2 // 2
+    is_hi = (offs2 % 2) == 0
+    tile = tl.where(is_hi, w_hi[idx], w_lo[idx])
+
+    out_offs = pid * 2 * BLOCK_SIZE + offs2
+    out_mask = out_offs < (n_packed * 2)
+    tl.store(out_ptr + out_offs, tile.to(OUT_DTYPE), mask=out_mask)
+
+
+_OUT_DTYPE_MAP = {
+    torch.float16: tl.float16,
+    torch.bfloat16: tl.bfloat16,
+}
+
+
+def _your_dequantize_nf4(
+    weight,
+    quant_state,
+    *,
+    use_custom_asm=False,
+    use_cache_eviction=False,
+    use_optimized=True,
+):
+    if not weight.is_cuda:
+        raise RuntimeError("NF4 dequantization requires CUDA.")
+
+    dtype = getattr(quant_state, "dtype", None)
+    if dtype not in _OUT_DTYPE_MAP:
+        raise RuntimeError("quant_state.dtype must be float16 or bfloat16.")
+
+    shifts = _compute_shift_offsets(weight, quant_state)
+    if shifts is None or not use_optimized:
+        return fast_dequantize(weight, quant_state)
+    offset1, offset2 = shifts
+
+    device = weight.device
+    weight_flat = weight.contiguous()
+    absmax = _ensure_tensor(quant_state.absmax, device, torch.uint8)
+    absmax2 = _ensure_tensor(quant_state.state2.absmax, device, torch.float32)
+    code2 = _ensure_tensor(quant_state.state2.code, device, torch.float32)
+    lut = _nf4_lut_for(device)
+    evict = (
+        torch.empty_like(weight_flat)
+        if use_cache_eviction
+        else torch.empty(1, device=device, dtype=torch.uint8)
+    )
+    offset = torch.tensor(float(quant_state.offset), device=device, dtype=torch.float32)
+
+    n_packed = weight_flat.numel()
+    out_flat = torch.empty(n_packed * 2, device=device, dtype=dtype)
+
+    grid = lambda meta: (triton.cdiv(n_packed, meta["BLOCK_SIZE"]),)
+
+    _your_dequantize_nf4_kernel[grid](
+        weight_flat,
+        absmax,
+        absmax2,
+        code2,
+        lut,
+        evict,
+        out_flat,
+        offset,
+        n_packed,
+        offset1,
+        offset2,
+        OUT_DTYPE=_OUT_DTYPE_MAP[dtype],
+        USE_CUSTOM_ASM=use_custom_asm,
+        USE_CACHE_EVICT=use_cache_eviction,
+    )
+
+    output_shape = _get_output_shape(quant_state, weight)
+    return out_flat.view(output_shape)
+
+
+def your_dequantize_nf4(
+    weight,
+    *,
+    use_custom_asm=False,
+    use_cache_eviction=False,
+    use_optimized=True,
+):
+    return _your_dequantize_nf4(
+        weight.weight.data,
+        weight.weight.quant_state,
+        use_custom_asm=use_custom_asm,
+        use_cache_eviction=use_cache_eviction,
+        use_optimized=use_optimized,
+    )
 
 ### TEST IT BELOW:
 # test_dequantize(your_dequantize_nf4)
