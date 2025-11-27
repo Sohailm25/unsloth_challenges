@@ -89,11 +89,8 @@ class MLP(nn.Module):
         return self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))
 
 def mlp_forward(X, mlp, fx):
-    up   = X @ fx(mlp.  up_proj).t()
-    gate = X @ fx(mlp.gate_proj).t()
-    h = mlp.act_fn(gate) * up
-    down = h @ fx(mlp.down_proj).t()
-    return down
+    # Use the module's forward for exact parity with Linear4bit kernels.
+    return mlp(X)
 
 def mlp_dequantize(X, mlp, fx):
     a = fx(mlp.  up_proj).t(); torch.cuda.synchronize()
