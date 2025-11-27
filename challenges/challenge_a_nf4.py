@@ -373,7 +373,7 @@ def your_dequantize_nf4(
 
 def _debug_dequant_single_block(weight):
     """Return debug info for the first block to compare with reference."""
-    if not weight.is_cuda:
+    if not weight.weight.is_cuda:
         raise RuntimeError("Debug dequant requires CUDA.")
 
     qs = weight.weight.quant_state
