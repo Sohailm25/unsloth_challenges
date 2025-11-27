@@ -14,7 +14,7 @@ image = (
         "unsloth",
         "pytest",
     )
-    .add_local_dir(".", "/workspace", include=["**/*.py", "reference/**", "tests/**"])
+    .add_local_dir(".", "/workspace")
 )
 
 
