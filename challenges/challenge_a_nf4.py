@@ -164,7 +164,8 @@ def _is_power_of_two(value):
 
 
 def _compute_shift_offsets(weight, quant_state):
-    n_weights = weight.numel() * 2
+    n_weights = math.prod(quant_state.shape)
+    n_bytes = weight.numel()
     absmax = quant_state.absmax
     state2 = getattr(quant_state, "state2", None)
     if state2 is None or absmax is None or state2.absmax is None:
@@ -172,11 +173,18 @@ def _compute_shift_offsets(weight, quant_state):
     if absmax.numel() == 0 or state2.absmax.numel() == 0:
         return None
 
-    # bytes per absmax = blocksize / 2
     blocksize = int(getattr(quant_state, "blocksize", 0))
     if blocksize <= 0 or blocksize % 2 != 0:
         return None
-    bytes_per_absmax = blocksize // 2
+
+    # Detect packing: packed bytes or one byte per weight
+    if n_bytes * 2 == n_weights:
+        bytes_per_absmax = blocksize // 2
+    elif n_bytes == n_weights:
+        bytes_per_absmax = blocksize
+    else:
+        return None
+
     n_absmax = absmax.numel()
     expected_absmax = math.ceil(n_weights / blocksize)
     if expected_absmax != n_absmax:
@@ -229,6 +237,7 @@ def _your_dequantize_nf4_kernel(
     out_ptr,
     offset_ptr,
     n_packed,
+    n_weights,
     shift_absmax_bytes,
     shift_absmax2,
     OUT_DTYPE: tl.constexpr,
@@ -284,8 +293,8 @@ def _your_dequantize_nf4_kernel(
     base_out = pid * 2 * BLOCK_SIZE
     hi_offs = base_out + 2 * tl.arange(0, BLOCK_SIZE)
     lo_offs = hi_offs + 1
-    out_mask_hi = hi_offs < (n_packed * 2)
-    out_mask_lo = lo_offs < (n_packed * 2)
+    out_mask_hi = hi_offs < n_weights
+    out_mask_lo = lo_offs < n_weights
     tl.store(out_ptr + hi_offs, w_hi.to(OUT_DTYPE), mask=out_mask_hi)
     tl.store(out_ptr + lo_offs, w_lo.to(OUT_DTYPE), mask=out_mask_lo)
 
@@ -330,7 +339,8 @@ def _your_dequantize_nf4(
     offset = torch.tensor(float(quant_state.offset), device=device, dtype=torch.float32)
 
     n_packed = weight_flat.numel()
-    out_flat = torch.empty(n_packed * 2, device=device, dtype=dtype)
+    n_weights = math.prod(quant_state.shape)
+    out_flat = torch.empty(n_weights, device=device, dtype=dtype)
 
     grid = lambda meta: (triton.cdiv(n_packed, meta["BLOCK_SIZE"]),)
 
@@ -344,6 +354,7 @@ def _your_dequantize_nf4(
         out_flat,
         offset,
         n_packed,
+        n_weights,
         offset1,
         offset2,
         OUT_DTYPE=_OUT_DTYPE_MAP[dtype],
