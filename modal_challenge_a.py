@@ -14,6 +14,7 @@ image = (
         "unsloth",
         "pytest",
     )
+    .add_local_dir(".", "/workspace", include=["**/*.py", "reference/**", "tests/**"])
 )
 
 
@@ -24,7 +25,6 @@ app = modal.App("nf4-challenge")
     image=image,
     gpu="T4",
     timeout=900,
-    mounts=[modal.Mount.from_local_dir(".", "/workspace", recursive=True)],
 )
 def run_tests():
     import os
@@ -42,7 +42,6 @@ def run_tests():
     image=image,
     gpu="T4",
     timeout=900,
-    mounts=[modal.Mount.from_local_dir(".", "/workspace", recursive=True)],
 )
 def run_benchmarks():
     import os
