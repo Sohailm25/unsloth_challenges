@@ -370,6 +370,56 @@ def your_dequantize_nf4(
         use_optimized=use_optimized,
     )
 
+
+def _debug_dequant_single_block(weight):
+    """Return debug info for the first block to compare with reference."""
+    if not weight.is_cuda:
+        raise RuntimeError("Debug dequant requires CUDA.")
+
+    qs = weight.weight.quant_state
+    blocksize = int(getattr(qs, "blocksize", 64))
+    block_bytes = blocksize // 2
+    n_weights = qs.shape.numel()
+    n_bytes = math.ceil(n_weights / 2)
+    # Take first byte block
+    weight_flat = weight.weight.data.contiguous()
+    packed_slice = weight_flat[:block_bytes]
+
+    # Host reference reconstruction for that block
+    code_lut = qs.code.to(torch.float32)
+    absmax_codes = qs.absmax.to(torch.uint8)
+    code2 = qs.state2.code.to(torch.float32)
+    absmax2 = qs.state2.absmax.to(torch.float32)
+    offset = torch.tensor(float(qs.offset), device=weight_flat.device, dtype=torch.float32)
+
+    # Compute first block indices
+    abs_idx = torch.arange(0, block_bytes, device=weight_flat.device) // block_bytes
+    abs2_idx = abs_idx // qs.state2.blocksize
+    abs_vals = code2[absmax_codes[abs_idx]] * absmax2[abs2_idx] + offset
+
+    # Dequant host-side for the block
+    q = packed_slice
+    hi = q >> 4
+    lo = q & 0x0F
+    w_hi = code_lut[hi] * abs_vals
+    w_lo = code_lut[lo] * abs_vals
+    host_out = torch.empty(block_bytes * 2, device=weight_flat.device, dtype=qs.dtype)
+    host_out[0::2] = w_hi
+    host_out[1::2] = w_lo
+
+    # Kernel out for same slice
+    kernel_out = your_dequantize_nf4(weight, use_custom_asm=False, use_cache_eviction=False, use_optimized=True)
+    kernel_block = kernel_out.flatten()[: blocksize]
+
+    return {
+        "packed": packed_slice.detach().cpu(),
+        "absmax_codes": absmax_codes[:1].detach().cpu(),
+        "absmax2": absmax2[:1].detach().cpu(),
+        "offset": offset.detach().cpu(),
+        "host_out": host_out.detach().cpu(),
+        "kernel_out": kernel_block.detach().cpu(),
+    }
+
 ### TEST IT BELOW:
 # test_dequantize(your_dequantize_nf4)
 
