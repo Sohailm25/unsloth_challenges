@@ -6,6 +6,7 @@ import modal
 
 image = (
     modal.Image.from_registry("pytorch/pytorch:2.3.1-cuda12.1-cudnn8-runtime")
+    .apt_install("build-essential")
     .pip_install(
         "torch==2.3.0",
         "triton==2.3.0",
