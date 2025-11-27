@@ -392,7 +392,7 @@ def _debug_dequant_single_block(weight):
     blocksize = int(getattr(qs, "blocksize", 64))
     block_bytes = blocksize // 2
     n_weights = qs.shape.numel()
-    n_bytes = math.ceil(n_weights / 2)
+    n_bytes = weight.weight.data.numel()
     # Take first byte block
     weight_flat = weight.weight.data.flatten().contiguous()
     packed_slice = weight_flat[:block_bytes]
@@ -430,6 +430,10 @@ def _debug_dequant_single_block(weight):
         "offset": offset.detach().cpu(),
         "host_out": host_out.detach().cpu(),
         "kernel_out": kernel_block.detach().cpu(),
+        "n_weights": n_weights,
+        "n_bytes": n_bytes,
+        "blocksize": blocksize,
+        "blocksize2": qs.state2.blocksize,
     }
 
 ### TEST IT BELOW:
