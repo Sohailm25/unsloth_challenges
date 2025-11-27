@@ -217,15 +217,6 @@ def _ensure_tensor(tensor, device, dtype=None):
     return target.contiguous()
 
 
-@triton.autotune(
-    configs=[
-        triton.Config({"BLOCK_SIZE": 256}, num_warps=4, num_stages=2),
-        triton.Config({"BLOCK_SIZE": 512}, num_warps=4, num_stages=2),
-        triton.Config({"BLOCK_SIZE": 512}, num_warps=8, num_stages=3),
-        triton.Config({"BLOCK_SIZE": 1024}, num_warps=8, num_stages=3),
-    ],
-    key=["n_packed"],
-)
 @triton.jit
 def _your_dequantize_nf4_kernel(
     weight_ptr,
