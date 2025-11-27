@@ -7,8 +7,8 @@ import modal
 image = (
     modal.Image.from_registry("pytorch/pytorch:2.3.1-cuda12.1-cudnn8-runtime")
     .pip_install(
-        "torch==2.3.1",
-        "triton==2.3.1",
+        "torch==2.3.0",
+        "triton==2.3.0",
         "bitsandbytes==0.43.1",
         "transformers>=4.41.0",
         "peft>=0.11.0",
