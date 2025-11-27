@@ -423,6 +423,8 @@ def _debug_dequant_single_block(weight):
     kernel_out = your_dequantize_nf4(weight, use_custom_asm=False, use_cache_eviction=False, use_optimized=True)
     kernel_block = kernel_out.flatten()[: blocksize]
 
+    ref_out = fast_dequantize(weight.weight, qs).flatten()[: blocksize]
+
     return {
         "packed": packed_slice.detach().cpu(),
         "absmax_codes": absmax_codes[:1].detach().cpu(),
@@ -430,6 +432,7 @@ def _debug_dequant_single_block(weight):
         "offset": offset.detach().cpu(),
         "host_out": host_out.detach().cpu(),
         "kernel_out": kernel_block.detach().cpu(),
+        "ref_out": ref_out.detach().cpu(),
         "n_weights": n_weights,
         "n_bytes": n_bytes,
         "blocksize": blocksize,

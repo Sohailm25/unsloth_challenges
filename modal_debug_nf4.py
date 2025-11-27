@@ -42,5 +42,8 @@ def debug_block():
     print("n_weights:", info["n_weights"], "n_bytes:", info["n_bytes"], "blocksize:", info["blocksize"], "blocksize2:", info["blocksize2"])
     print("host_out first 8:", info["host_out"][:8])
     print("kernel_out first 8:", info["kernel_out"][:8])
+    print("ref_out first 8:", info["ref_out"][:8])
     diff = (info["host_out"][:128] - info["kernel_out"][:128]).abs()
     print("max_diff_first_block:", diff.max())
+    diff_ref = (info["ref_out"][:128] - info["kernel_out"][:128]).abs()
+    print("max_diff_kernel_vs_ref_first_block:", diff_ref.max())
