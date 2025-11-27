@@ -97,3 +97,33 @@ def debug_case_bf16():
     mismatches = (diff > 1e-5).sum().item()
     idx = diff.view(-1).argmax().item()
     print({"hd": hd, "m": m, "dtype": str(dt), "max_diff": max_diff, "mismatches_gt_1e-5": mismatches, "max_idx": idx, "target_val": target.view(-1)[idx].item(), "ours_val": ours.view(-1)[idx].item()})
+
+
+@app.function(image=image, gpu="T4", timeout=900)
+def debug_all_layers():
+    import os
+    import torch
+    from transformers import set_seed
+    from challenges.challenge_a_nf4 import MLP, fast_dequantize, your_dequantize_nf4
+
+    os.chdir("/workspace")
+    set_seed(3407)
+    torch.set_default_dtype(torch.float32)
+    hd, m, dt = 2048, 8192, torch.float16
+    mlp = MLP(hd=hd, m=m, dtype=dt)
+    results = {}
+    for name, layer in [("up", mlp.up_proj), ("gate", mlp.gate_proj), ("down", mlp.down_proj)]:
+        target = fast_dequantize(layer.weight, layer.weight.quant_state)
+        ours = your_dequantize_nf4(layer, use_custom_asm=False, use_cache_eviction=False, use_optimized=True)
+        diff = (target - ours).abs()
+        max_diff = diff.max().item()
+        mismatches = (diff > 1e-5).sum().item()
+        idx = diff.view(-1).argmax().item()
+        results[name] = {
+            "max_diff": max_diff,
+            "mismatches": mismatches,
+            "idx": idx,
+            "target": target.view(-1)[idx].item(),
+            "ours": ours.view(-1)[idx].item(),
+        }
+    print(results)
