@@ -127,3 +127,21 @@ def debug_all_layers():
             "ours": ours.view(-1)[idx].item(),
         }
     print(results)
+
+
+@app.function(image=image, gpu="T4", timeout=900)
+def debug_forward():
+    import os
+    import torch
+    from transformers import set_seed
+    from challenges.challenge_a_nf4 import MLP, mlp_forward, your_dequantize_nf4
+
+    os.chdir("/workspace")
+    set_seed(3407)
+    hd, m, dt = 2048, 8192, torch.float16
+    mlp = MLP(hd=hd, m=m, dtype=dt)
+    X = torch.randn((2, 3333, hd), device="cuda", dtype=dt)
+    ref = mlp(X)
+    ours = mlp_forward(X, mlp, your_dequantize_nf4)
+    diff = (ref - ours).abs()
+    print({"max_diff": diff.max().item(), "mismatches_gt_1e-5": (diff > 1e-5).sum().item()})
