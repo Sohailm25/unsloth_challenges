@@ -47,7 +47,7 @@ def debug_block():
     print("max_diff_first_block:", diff.max())
     diff_ref = (info["ref_out"][:128] - info["kernel_out"][:128]).abs()
     print("max_diff_kernel_vs_ref_first_block:", diff_ref.max())
-    from challenges.challenge_a_nf4 import fast_dequantize
+    from challenges.challenge_a_nf4 import fast_dequantize, your_dequantize_nf4
     full_kernel = your_dequantize_nf4(mlp.up_proj, use_custom_asm=False, use_cache_eviction=False, use_optimized=True)
     full_ref = fast_dequantize(mlp.up_proj.weight, mlp.up_proj.weight.quant_state)
     full_diff = (full_kernel - full_ref).abs()
