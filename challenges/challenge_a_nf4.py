@@ -399,8 +399,8 @@ def _debug_dequant_single_block(weight):
 
     # Dequant host-side for the block
     q = packed_slice
-    hi = q >> 4
-    lo = q & 0x0F
+    hi = (q >> 4).long()
+    lo = (q & 0x0F).long()
     w_hi = code_lut[hi].to(torch.float32) * abs_vals.to(torch.float32)
     w_lo = code_lut[lo].to(torch.float32) * abs_vals.to(torch.float32)
     host_out = torch.empty(block_bytes * 2, device=weight_flat.device, dtype=qs.dtype)
