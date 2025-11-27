@@ -51,4 +51,7 @@ def debug_block():
     full_kernel = your_dequantize_nf4(mlp.up_proj, use_custom_asm=False, use_cache_eviction=False, use_optimized=True)
     full_ref = fast_dequantize(mlp.up_proj.weight, mlp.up_proj.weight.quant_state)
     full_diff = (full_kernel - full_ref).abs()
+    max_val, max_idx = full_diff.max(dim=0)
+    max_flat = full_diff.view(-1).argmax()
     print("full_max_diff:", full_diff.max().item(), "mismatches >", (full_diff > 1e-5).sum().item())
+    print("max_diff_index_flat:", max_flat.item(), "kernel:", full_kernel.view(-1)[max_flat].item(), "ref:", full_ref.view(-1)[max_flat].item())
