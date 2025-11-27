@@ -293,8 +293,9 @@ def _your_dequantize_nf4_kernel(
     base_out = pid * 2 * BLOCK_SIZE
     hi_offs = base_out + 2 * tl.arange(0, BLOCK_SIZE)
     lo_offs = hi_offs + 1
-    out_mask_hi = hi_offs < n_weights
-    out_mask_lo = lo_offs < n_weights
+    valid = mask
+    out_mask_hi = valid & (hi_offs < n_weights)
+    out_mask_lo = valid & (lo_offs < n_weights)
     tl.store(out_ptr + hi_offs, w_hi.to(OUT_DTYPE), mask=out_mask_hi)
     tl.store(out_ptr + lo_offs, w_lo.to(OUT_DTYPE), mask=out_mask_lo)
 
