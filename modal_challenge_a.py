@@ -13,7 +13,7 @@ image = (
         "transformers>=4.41.0",
         "peft>=0.11.0",
         "unsloth",
-        "xformers==0.0.27",
+        "xformers==0.0.26",
         "pytest",
     )
     .add_local_dir(".", "/workspace")
