@@ -401,8 +401,8 @@ def _debug_dequant_single_block(weight):
     q = packed_slice
     hi = q >> 4
     lo = q & 0x0F
-    w_hi = code_lut[hi] * abs_vals
-    w_lo = code_lut[lo] * abs_vals
+    w_hi = code_lut[hi].to(torch.float32) * abs_vals.to(torch.float32)
+    w_lo = code_lut[lo].to(torch.float32) * abs_vals.to(torch.float32)
     host_out = torch.empty(block_bytes * 2, device=weight_flat.device, dtype=qs.dtype)
     host_out[0::2] = w_hi
     host_out[1::2] = w_lo
