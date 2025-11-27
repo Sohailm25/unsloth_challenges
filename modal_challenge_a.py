@@ -5,15 +5,15 @@ import modal
 
 
 image = (
-    modal.Image.from_registry("pytorch/pytorch:2.2.2-cuda12.1-cudnn8-runtime")
+    modal.Image.from_registry("pytorch/pytorch:2.3.1-cuda12.1-cudnn8-runtime")
     .apt_install("build-essential")
     .pip_install(
-        "torch==2.2.2",
-        "triton==2.1.0",
+        "torch==2.3.1",
+        "triton==2.3.1",
         "bitsandbytes==0.43.1",
         "transformers>=4.41.0",
         "peft>=0.11.0",
-        "xformers==0.0.26.post1",
+        "xformers==0.0.27.post1",
         "trl<0.9.0",
         "pytest",
     )
