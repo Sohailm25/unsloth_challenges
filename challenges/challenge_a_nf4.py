@@ -233,16 +233,16 @@ def _ensure_tensor(tensor, device, dtype=None):
 
 @triton.autotune(
     configs=[
-        triton.Config({"BLOCK_SIZE": 256}, num_warps=4, num_stages=2),
-        triton.Config({"BLOCK_SIZE": 512}, num_warps=4, num_stages=2),
-        triton.Config({"BLOCK_SIZE": 512}, num_warps=8, num_stages=3),
-        triton.Config({"BLOCK_SIZE": 1024}, num_warps=8, num_stages=3),
+        triton.Config({"BLOCK_SIZE": 256, "LOAD_VEC": 4}, num_warps=4, num_stages=2),
+        triton.Config({"BLOCK_SIZE": 512, "LOAD_VEC": 4}, num_warps=4, num_stages=2),
+        triton.Config({"BLOCK_SIZE": 512, "LOAD_VEC": 4}, num_warps=8, num_stages=3),
+        triton.Config({"BLOCK_SIZE": 1024, "LOAD_VEC": 4}, num_warps=8, num_stages=3),
     ],
     key=["n_packed"],
 )
 @triton.jit
 def _your_dequantize_nf4_kernel(
-    weight_ptr,
+    weight_ptr,  # int32* (each element holds 4 packed bytes)
     absmax_ptr,
     absmax2_ptr,
     code2_ptr,
@@ -262,44 +262,49 @@ def _your_dequantize_nf4_kernel(
     USE_CUSTOM_ASM: tl.constexpr,
     USE_CACHE_EVICT: tl.constexpr,
     BLOCK_SIZE: tl.constexpr,
+    LOAD_VEC: tl.constexpr,
 ):
     pid = tl.program_id(0)
     offs_local = tl.arange(0, BLOCK_SIZE)
-    offs = pid * BLOCK_SIZE + offs_local
-    tl.multiple_of(offs, 4)
-    mask = offs < n_packed
+    group_idx = pid * BLOCK_SIZE + offs_local
+
+    byte_base = group_idx * LOAD_VEC
+    mask_group = byte_base < n_packed
 
     if USE_CACHE_EVICT:
         _ = tl.load(
-            evict_ptr + offs,
-            mask=mask,
+            evict_ptr + byte_base,
+            mask=mask_group,
             other=0,
             eviction_policy="evict_last",
         )
 
-    packed = tl.load(weight_ptr + offs, mask=mask, other=0).to(tl.uint32)
+    packed32 = tl.load(
+        weight_ptr + group_idx,
+        mask=mask_group,
+        other=0,
+    ).to(tl.uint32)
 
-    asm_fn = getattr(tl, "asm", None)
-    if USE_CUSTOM_ASM and asm_fn is not None:
-        hi, lo = asm_fn(
-            "{\n"
-            " .reg .u32 tmp;\n"
-            " mov.b32 tmp, $2;\n"
-            " and.b32 $1, tmp, 0x0f;\n"
-            " shr.u32 $0, tmp, 4;\n"
-            "}\n",
-            outputs=[("=r", tl.uint32), ("=r", tl.uint32)],
-            inputs=[("r", packed)],
-        )
-    else:
-        lo = packed & 0x0F
-        hi = packed >> 4
+    shifts = (tl.arange(0, LOAD_VEC) * 8).to(tl.uint32)
+    bytes2d = (packed32[:, None] >> shifts[None, :]) & 0xFF  # [BLOCK_SIZE, LOAD_VEC]
 
-    weight_pos = offs * 2
-    absmax_idx = (offs >> shift_absmax_bytes).to(tl.int32)
-    absmax2_idx = (absmax_idx >> shift_absmax2).to(tl.int32)
+    byte_offsets2d = byte_base[:, None] + tl.arange(0, LOAD_VEC)[None, :]
+    mask_bytes2d = byte_offsets2d < n_packed
+
+    lo2d = bytes2d & 0x0F
+    hi2d = bytes2d >> 4
+
+    absmax_idx_2d = (byte_offsets2d >> shift_absmax_bytes).to(tl.int32)
+    absmax2_idx_2d = (absmax_idx_2d >> shift_absmax2).to(tl.int32)
+
+    hi = tl.reshape(hi2d, (BLOCK_SIZE * LOAD_VEC,))
+    lo = tl.reshape(lo2d, (BLOCK_SIZE * LOAD_VEC,))
+    absmax_idx = tl.reshape(absmax_idx_2d, (BLOCK_SIZE * LOAD_VEC,))
+    absmax2_idx = tl.reshape(absmax2_idx_2d, (BLOCK_SIZE * LOAD_VEC,))
+    mask = tl.reshape(mask_bytes2d, (BLOCK_SIZE * LOAD_VEC,))
 
     offset = tl.load(offset_ptr).to(tl.float32)
+
     abs_mask = mask & (absmax_idx < n_absmax)
     absmax_quant = tl.load(
         absmax_ptr + absmax_idx,
@@ -308,12 +313,14 @@ def _your_dequantize_nf4_kernel(
         eviction_policy="evict_last",
     ).to(tl.int32)
     absmax_quant = tl.where(absmax_quant > 255, 0, absmax_quant)
+
     code_val = tl.load(
         code2_ptr + absmax_quant,
         mask=abs_mask,
         other=0,
         eviction_policy="evict_last",
     ).to(tl.float32)
+
     abs2_mask = mask & (absmax2_idx < n_absmax2)
     scale = tl.load(
         absmax2_ptr + absmax2_idx,
@@ -321,6 +328,7 @@ def _your_dequantize_nf4_kernel(
         other=1.0,
         eviction_policy="evict_last",
     ).to(tl.float32)
+
     fma = getattr(tl, "fma", None)
     absmax = fma(code_val, scale, offset) if fma is not None else code_val * scale + offset
 
@@ -329,25 +337,20 @@ def _your_dequantize_nf4_kernel(
     w_hi = w_hi * absmax
     w_lo = w_lo * absmax
 
-    # Contiguous interleave without tl.stack/gather (Triton 2.3.1 friendly)
-    hi_2d = tl.reshape(w_hi, (BLOCK_SIZE, 1))
-    lo_2d = tl.reshape(w_lo, (BLOCK_SIZE, 1))
+    hi_2d_out = tl.reshape(w_hi, (BLOCK_SIZE * LOAD_VEC, 1))
+    lo_2d_out = tl.reshape(w_lo, (BLOCK_SIZE * LOAD_VEC, 1))
     cols = tl.reshape(tl.arange(0, 2), (1, 2))
-    vals_2d = tl.where(cols == 0, hi_2d, lo_2d)
-    vals = tl.reshape(vals_2d, (2 * BLOCK_SIZE,))
-    out_base = pid * 2 * BLOCK_SIZE
-    out_offsets = out_base + tl.arange(0, 2 * BLOCK_SIZE)
+    vals_2d = tl.where(cols == 0, hi_2d_out, lo_2d_out)
+    vals = tl.reshape(vals_2d, (2 * BLOCK_SIZE * LOAD_VEC,))
+
+    out_base = pid * 2 * BLOCK_SIZE * LOAD_VEC
+    out_offsets = out_base + tl.arange(0, 2 * BLOCK_SIZE * LOAD_VEC)
     out_mask = out_offsets < n_weights
     tl.store(out_ptr + out_offsets, vals.to(OUT_DTYPE), mask=out_mask, eviction_policy="evict_last")
 
     if debug_block >= 0:
-        if pid == debug_block:
-            # layout: row0=w_hi, row1=w_lo, row2=absmax, row3=hi, row4=absmax_idx
-            tl.store(debug_ptr + offs_local, w_hi.to(tl.float32), mask=mask)
-            tl.store(debug_ptr + BLOCK_SIZE + offs_local, w_lo.to(tl.float32), mask=mask)
-            tl.store(debug_ptr + 2 * BLOCK_SIZE + offs_local, absmax, mask=mask)
-            tl.store(debug_ptr + 3 * BLOCK_SIZE + offs_local, hi.to(tl.float32), mask=mask)
-            tl.store(debug_ptr + 4 * BLOCK_SIZE + offs_local, absmax_idx.to(tl.float32), mask=mask)
+        # Debug path omitted in vectorized kernel to avoid compile-time indexing issues.
+        pass
 
 
 _OUT_DTYPE_MAP = {
@@ -374,19 +377,22 @@ def _your_dequantize_nf4(
         raise RuntimeError("quant_state.dtype must be float16 or bfloat16.")
 
     device = weight.device
-    weight_flat = weight.contiguous()
+    weight_flat_u8 = weight.contiguous().view(-1)
+    n_packed = weight_flat_u8.numel()
+    if n_packed % 4 != 0:
+        raise RuntimeError("NF4 packed size must be a multiple of 4 for LOAD_VEC=4 kernel.")
+    weight_flat_u32 = weight_flat_u8.view(torch.int32)
+
     absmax = _ensure_tensor(quant_state.absmax, device, torch.uint8)
     absmax2 = _ensure_tensor(quant_state.state2.absmax, device, torch.float32)
     code2 = _ensure_tensor(quant_state.state2.code, device, torch.float32)
     lut = _ensure_tensor(quant_state.code, device, torch.float32)
     evict = (
-        torch.empty_like(weight_flat)
+        torch.empty_like(weight_flat_u8)
         if use_cache_eviction
         else torch.empty(1, device=device, dtype=torch.uint8)
     )
     offset = torch.tensor(float(quant_state.offset), device=device, dtype=torch.float32)
-
-    n_packed = weight_flat.numel()
     n_weights = math.prod(quant_state.shape)
     n_absmax = absmax.numel()
     n_absmax2 = absmax2.numel()
@@ -400,16 +406,16 @@ def _your_dequantize_nf4(
 
     out_flat = torch.empty(n_weights, device=device, dtype=out_storage_dtype)
 
-    grid = lambda meta: (triton.cdiv(n_packed, meta["BLOCK_SIZE"]),)
+    grid = lambda meta: (triton.cdiv(n_packed, meta["BLOCK_SIZE"] * meta["LOAD_VEC"]),)
 
     debug_buffer = None
     dbg_block_val = -1
     if debug_block is not None:
         dbg_block_val = int(debug_block)
-        debug_buffer = torch.empty((5, 512), device=device, dtype=torch.float32)
+        debug_buffer = torch.empty((5, 2048), device=device, dtype=torch.float32)
 
     _your_dequantize_nf4_kernel[grid](
-        weight_flat,
+        weight_flat_u32,
         absmax,
         absmax2,
         code2,
