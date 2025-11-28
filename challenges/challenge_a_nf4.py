@@ -312,13 +312,16 @@ def _your_dequantize_nf4_kernel(
     w_hi = w_hi * absmax
     w_lo = w_lo * absmax
 
+    # Contiguous interleave without tl.stack/gather (Triton 2.3.1 friendly)
+    hi_2d = tl.reshape(w_hi, (BLOCK_SIZE, 1))
+    lo_2d = tl.reshape(w_lo, (BLOCK_SIZE, 1))
+    cols = tl.reshape(tl.arange(0, 2), (1, 2))
+    vals_2d = tl.where(cols == 0, hi_2d, lo_2d)
+    vals = tl.reshape(vals_2d, (2 * BLOCK_SIZE,))
     out_base = pid * 2 * BLOCK_SIZE
-    out_even = out_base + offs_local * 2
-    out_odd = out_even + 1
-    out_mask_even = (out_even < n_weights) & mask
-    out_mask_odd = (out_odd < n_weights) & mask
-    tl.store(out_ptr + out_even, w_hi.to(OUT_DTYPE), mask=out_mask_even, eviction_policy="evict_last")
-    tl.store(out_ptr + out_odd, w_lo.to(OUT_DTYPE), mask=out_mask_odd, eviction_policy="evict_last")
+    out_offsets = out_base + tl.arange(0, 2 * BLOCK_SIZE)
+    out_mask = out_offsets < n_weights
+    tl.store(out_ptr + out_offsets, vals.to(OUT_DTYPE), mask=out_mask, eviction_policy="evict_last")
 
     if debug_block >= 0:
         if pid == debug_block:
