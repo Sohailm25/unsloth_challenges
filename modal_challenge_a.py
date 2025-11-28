@@ -71,3 +71,46 @@ def run_benchmarks():
     new_time = test_dequantize(your_dequantize_nf4)
     torch.cuda.synchronize()
     print({"ref_time": ref_time, "new_time": new_time, "speedup": ref_time / new_time})
+
+
+@app.function(
+    image=image,
+    gpu="T4",
+    timeout=900,
+)
+def run_profile():
+    """Profile a short run to see where time is spent."""
+    import os
+    import torch
+    import sys as _sys
+    from torch.profiler import profile, record_function, ProfilerActivity
+
+    _sys.path.insert(0, "/workspace")
+    from challenges.challenge_a_nf4 import MLP, mlp_dequantize, your_dequantize_nf4, unsloth_dequantize
+
+    os.chdir("/workspace")
+    torch.set_default_dtype(torch.float32)
+    torch.manual_seed(3407)
+    hd, m, dt = 2048, 8192, torch.float16
+    mlp = MLP(hd=hd, m=m, dtype=dt)
+    X = torch.randn((2, 3333, hd), device="cuda", dtype=dt)
+
+    torch.cuda.synchronize()
+    with profile(
+        activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],
+        record_shapes=False,
+        profile_memory=False,
+        with_stack=False,
+    ) as prof:
+        # reference
+        with record_function("ref_fast_dequant"):
+            for _ in range(5):
+                mlp_dequantize(X, mlp, unsloth_dequantize)
+        torch.cuda.synchronize()
+        # ours
+        with record_function("ours_kernel"):
+            for _ in range(5):
+                mlp_dequantize(X, mlp, your_dequantize_nf4)
+        torch.cuda.synchronize()
+
+    print(prof.key_averages().table(sort_by="cuda_time_total", row_limit=15))

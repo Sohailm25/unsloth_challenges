@@ -387,12 +387,19 @@ def _your_dequantize_nf4(
     absmax2 = _ensure_tensor(quant_state.state2.absmax, device, torch.float32)
     code2 = _ensure_tensor(quant_state.state2.code, device, torch.float32)
     lut = _ensure_tensor(quant_state.code, device, torch.float32)
-    evict = (
-        torch.empty_like(weight_flat_u8)
-        if use_cache_eviction
-        else torch.empty(1, device=device, dtype=torch.uint8)
-    )
-    offset = torch.tensor(float(quant_state.offset), device=device, dtype=torch.float32)
+    if use_cache_eviction:
+        cached_evict = getattr(quant_state, "_cached_evict", None)
+        if cached_evict is None or cached_evict.numel() != weight_flat_u8.numel() or cached_evict.device != device:
+            cached_evict = torch.empty_like(weight_flat_u8)
+            quant_state._cached_evict = cached_evict
+        evict = cached_evict
+    else:
+        evict = torch.empty(1, device=device, dtype=torch.uint8)
+    cached_offset = getattr(quant_state, "_cached_offset", None)
+    if cached_offset is None or cached_offset.device != device:
+        cached_offset = torch.tensor(float(quant_state.offset), device=device, dtype=torch.float32)
+        quant_state._cached_offset = cached_offset
+    offset = cached_offset
     n_weights = math.prod(quant_state.shape)
     n_absmax = absmax.numel()
     n_absmax2 = absmax2.numel()
@@ -404,7 +411,11 @@ def _your_dequantize_nf4(
         out_storage_dtype = torch.float32
         out_dtype = tl.float32
 
-    out_flat = torch.empty(n_weights, device=device, dtype=out_storage_dtype)
+    cached_out = getattr(quant_state, "_cached_out", None)
+    if cached_out is None or cached_out.numel() != n_weights or cached_out.device != device or cached_out.dtype != out_storage_dtype:
+        cached_out = torch.empty(n_weights, device=device, dtype=out_storage_dtype)
+        quant_state._cached_out = cached_out
+    out_flat = cached_out
 
     grid = lambda meta: (triton.cdiv(n_packed, meta["BLOCK_SIZE"] * meta["LOAD_VEC"]),)
 
