@@ -1,8 +1,8 @@
-# Current State (2025-11-27)
-- Branch: chore/split-challenges; uncommitted changes include NF4 kernel implementation, tests, modal entrypoint, research log, and pre-commit config.
-- challenge_a_nf4.py now contains a fused Triton NF4 dequant kernel with shift-based indexing, LUT caching, optional asm and cache-eviction flags, and wrapper wiring.
-- tests/test_challenge_a_nf4.py exercises correctness (fp16/bf16), torch.compile path, and optional flags; CUDA-only, to be run via Modal.
-- modal_challenge_a.py provides T4 execution for pytest and benchmark comparison against unsloth fast_dequantize.
-- research/oracle_list-concrete-implementa-tips-to.md captures Triton tuning guidance; PRD remains in reference/full_prd.md.
-- Pre-commit hooks configured in .pre-commit-config.yaml; hooks not yet run locally.
-- No GPU-backed tests executed locally; Modal run pending to validate correctness and performance.
+# Current State (2025-11-28)
+- Branch: chore/split-challenges; working tree contains NF4 kernel, Modal harnesses, research logs, and session journals. Uncommitted changes include kernel fixes and new reference/research files.
+- Environment: `.venv` with Python 3.11 for Modal CLI; local deps include modal/pytest. Modal GPU images pin torch 2.3.1, triton 2.3.1, bitsandbytes 0.43.1, transformers>=4.41, peft>=0.11, trl<0.9; xformers omitted to avoid conflicts.
+- NF4 kernel (`challenges/challenge_a_nf4.py`): fused Triton kernel with shift-based indexing (`shift_absmax_bytes`, `shift_absmax2`), bounds masks on absmax/absmax2, optional asm nibble unpack + cache-evict load, bf16 emulation on pre-Ampere, torch.compile guard that falls back to fast_dequantize when compiling. Output store is currently strided even/odd (two `tl.store` ops) for Triton 2.3.1 compatibility; contiguous interleave optimization still pending.
+- Debug/Modal tooling: `modal_debug_nf4.py` for block-level diffs and forward checks; `modal_challenge_a.py` runs pytest/benchmarks on T4; research findings in `research/oracle_*.md`.
+- Test status (Modal T4, 2025-11-28): `tests/test_challenge_a_nf4.py` all pass (Modal run https://modal.com/apps/sohailm25/main/ap-Jffa9SCbAb48hlhP5SevS7). torch.compile test passes via fallback to fast_dequantize.
+- Benchmark status (Modal T4, 2025-11-28): `run_benchmarks` reports ref_time=5.25s, new_time=14.42s, speedup≈0.36× (ours slower; contiguous store optimization and further tuning required).
+- Next focus: restore contiguous/coalesced store that is Triton 2.3.1-compatible (e.g., tl.where tile without forbidden gather), retune BLOCK_SIZE/num_warps, and re-benchmark to reach ≥1.15× speedup. Maintain correctness while improving performance.

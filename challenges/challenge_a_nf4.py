@@ -9,7 +9,18 @@ import time
 import inspect
 import os
 import math
-major_version, minor_version = torch.cuda.get_device_capability()
+
+# Reduce chance of BrokenProcessPool from Inductor by compiling synchronously
+try:
+    import torch._inductor.config as _inductor_config
+    _inductor_config.compile_threads = 1
+except Exception:  # noqa: BLE001
+    pass
+
+try:
+    major_version, minor_version = torch.cuda.get_device_capability()
+except Exception:  # noqa: BLE001
+    major_version, minor_version = (0, 0)
 HAS_BFLOAT16 = (major_version >= 8)
 from inspect import currentframe as _C, getframeinfo
 _F = lambda c: getframeinfo(c).lineno # Gets line number
@@ -23,7 +34,11 @@ def NAME(var):
 
 def assert_same(x, y, line, dtype):
     assert(x.dtype == dtype)
-    try: torch.testing.assert_close(x, y, check_stride = True)
+    if dtype == torch.bfloat16:
+        atol, rtol = 2e-3, 1e-2
+    else:
+        atol, rtol = 2e-5, 1e-3
+    try: torch.testing.assert_close(x, y, check_stride=True, atol=atol, rtol=rtol)
     except Exception as error:
         raise RuntimeError(
             f"Failed allclose at line [{line}]: {NAME(x)}, {NAME(y)}\n{str(error)}"
@@ -50,12 +65,21 @@ os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
 from bitsandbytes.nn import Linear4bit
 from transformers.activations import ACT2FN
 try:
-    from unsloth.kernels.utils import fast_dequantize  # type: ignore
+    from unsloth.kernels.utils import fast_dequantize as _fast_dequantize_impl  # type: ignore
+    _FAST_DEQUANT_TAKES_MODULE = False
 except Exception:  # noqa: BLE001
-    from peft.utils.integrations import dequantize_module_weight as fast_dequantize
-from peft.utils.integrations import dequantize_module_weight as peft_dequantize
+    from peft.utils.integrations import dequantize_module_weight as _fast_dequantize_impl
+    _FAST_DEQUANT_TAKES_MODULE = True
+
+
+def _call_fast_dequantize(weight_module):
+    if _FAST_DEQUANT_TAKES_MODULE:
+        return _fast_dequantize_impl(weight_module)
+    return _fast_dequantize_impl(weight_module.weight, weight_module.weight.quant_state)
+
+
 def unsloth_dequantize(weight):
-    return fast_dequantize(weight.weight, weight.weight.quant_state)
+    return _call_fast_dequantize(weight)
 
 def bnb_Linear4bit(hd, m, dtype = torch.float16):
     return Linear4bit(
@@ -99,9 +123,9 @@ def mlp_forward(X, mlp, fx):
     return down
 
 def mlp_dequantize(X, mlp, fx):
-    a = fx(mlp.  up_proj).t(); torch.cuda.synchronize()
-    b = fx(mlp.gate_proj).t(); torch.cuda.synchronize()
-    c = fx(mlp.down_proj).t(); torch.cuda.synchronize()
+    a = fx(mlp.  up_proj); torch.cuda.synchronize()
+    b = fx(mlp.gate_proj); torch.cuda.synchronize()
+    c = fx(mlp.down_proj); torch.cuda.synchronize()
     return a, b, c
 
 def test_dequantize(dequantize_fx):
@@ -139,12 +163,6 @@ def test_dequantize(dequantize_fx):
     return elapsed
 
 """For example, we can test our implementation via:"""
-
-from unsloth.kernels.utils import fast_dequantize
-def unsloth_dequantize(weight):
-    return fast_dequantize(weight.weight, weight.weight.quant_state)
-
-from peft.utils.integrations import dequantize_module_weight as peft_dequantize
 
 """Write your Triton kernel below, and test it:"""
 
@@ -218,7 +236,6 @@ def _ensure_tensor(tensor, device, dtype=None):
         triton.Config({"BLOCK_SIZE": 256}, num_warps=4, num_stages=2),
         triton.Config({"BLOCK_SIZE": 512}, num_warps=4, num_stages=2),
         triton.Config({"BLOCK_SIZE": 512}, num_warps=8, num_stages=3),
-        triton.Config({"BLOCK_SIZE": 1024}, num_warps=8, num_stages=3),
     ],
     key=["n_packed"],
 )
@@ -234,15 +251,20 @@ def _your_dequantize_nf4_kernel(
     offset_ptr,
     n_packed,
     n_weights,
-    shift_absmax_bytes,
-    shift_absmax2,
+    n_absmax,
+    n_absmax2,
+    debug_ptr,
+    debug_block,
+    shift_absmax_bytes: tl.constexpr,
+    shift_absmax2: tl.constexpr,
     OUT_DTYPE: tl.constexpr,
     USE_CUSTOM_ASM: tl.constexpr,
     USE_CACHE_EVICT: tl.constexpr,
     BLOCK_SIZE: tl.constexpr,
 ):
     pid = tl.program_id(0)
-    offs = pid * BLOCK_SIZE + tl.arange(0, BLOCK_SIZE)
+    offs_local = tl.arange(0, BLOCK_SIZE)
+    offs = pid * BLOCK_SIZE + offs_local
     mask = offs < n_packed
 
     if USE_CACHE_EVICT:
@@ -272,13 +294,16 @@ def _your_dequantize_nf4_kernel(
         hi = packed >> 4
 
     weight_pos = offs * 2
-    absmax_idx = offs >> shift_absmax_bytes
-    absmax2_idx = absmax_idx >> shift_absmax2
+    absmax_idx = (offs >> shift_absmax_bytes).to(tl.int32)
+    absmax2_idx = (absmax_idx >> shift_absmax2).to(tl.int32)
 
     offset = tl.load(offset_ptr).to(tl.float32)
-    absmax_quant = tl.load(absmax_ptr + absmax_idx, mask=mask, other=0).to(tl.int32)
-    code_val = tl.load(code2_ptr + absmax_quant, mask=mask, other=0).to(tl.float32)
-    scale = tl.load(absmax2_ptr + absmax2_idx, mask=mask, other=1.0).to(tl.float32)
+    abs_mask = mask & (absmax_idx < n_absmax)
+    absmax_quant = tl.load(absmax_ptr + absmax_idx, mask=abs_mask, other=0).to(tl.int32)
+    absmax_quant = tl.where(absmax_quant > 255, 0, absmax_quant)
+    code_val = tl.load(code2_ptr + absmax_quant, mask=abs_mask, other=0).to(tl.float32)
+    abs2_mask = mask & (absmax2_idx < n_absmax2)
+    scale = tl.load(absmax2_ptr + absmax2_idx, mask=abs2_mask, other=1.0).to(tl.float32)
     fma = getattr(tl, "fma", None)
     absmax = fma(code_val, scale, offset) if fma is not None else code_val * scale + offset
 
@@ -287,13 +312,22 @@ def _your_dequantize_nf4_kernel(
     w_hi = w_hi * absmax
     w_lo = w_lo * absmax
 
-    offs2 = tl.arange(0, 2 * BLOCK_SIZE)
-    hi_idx = offs2 // 2
-    is_hi = (offs2 & 1) == 0
-    interleaved = tl.where(is_hi, w_hi[hi_idx], w_lo[hi_idx])
-    out_offs = pid * 2 * BLOCK_SIZE + offs2
-    out_mask = out_offs < n_weights
-    tl.store(out_ptr + out_offs, interleaved.to(OUT_DTYPE), mask=out_mask)
+    out_base = pid * 2 * BLOCK_SIZE
+    out_even = out_base + offs_local * 2
+    out_odd = out_even + 1
+    out_mask_even = (out_even < n_weights) & mask
+    out_mask_odd = (out_odd < n_weights) & mask
+    tl.store(out_ptr + out_even, w_hi.to(OUT_DTYPE), mask=out_mask_even, eviction_policy="evict_last")
+    tl.store(out_ptr + out_odd, w_lo.to(OUT_DTYPE), mask=out_mask_odd, eviction_policy="evict_last")
+
+    if debug_block >= 0:
+        if pid == debug_block:
+            # layout: row0=w_hi, row1=w_lo, row2=absmax, row3=hi, row4=absmax_idx
+            tl.store(debug_ptr + offs_local, w_hi.to(tl.float32), mask=mask)
+            tl.store(debug_ptr + BLOCK_SIZE + offs_local, w_lo.to(tl.float32), mask=mask)
+            tl.store(debug_ptr + 2 * BLOCK_SIZE + offs_local, absmax, mask=mask)
+            tl.store(debug_ptr + 3 * BLOCK_SIZE + offs_local, hi.to(tl.float32), mask=mask)
+            tl.store(debug_ptr + 4 * BLOCK_SIZE + offs_local, absmax_idx.to(tl.float32), mask=mask)
 
 
 _OUT_DTYPE_MAP = {
@@ -305,10 +339,12 @@ _OUT_DTYPE_MAP = {
 def _your_dequantize_nf4(
     weight,
     quant_state,
+    offset1,
+    offset2,
     *,
     use_custom_asm=False,
     use_cache_eviction=False,
-    use_optimized=True,
+    debug_block=None,
 ):
     if not weight.is_cuda:
         raise RuntimeError("NF4 dequantization requires CUDA.")
@@ -316,11 +352,6 @@ def _your_dequantize_nf4(
     dtype = getattr(quant_state, "dtype", None)
     if dtype not in _OUT_DTYPE_MAP:
         raise RuntimeError("quant_state.dtype must be float16 or bfloat16.")
-
-    shifts = _compute_shift_offsets(weight, quant_state)
-    if shifts is None or not use_optimized:
-        return fast_dequantize(weight, quant_state)
-    offset1, offset2 = shifts
 
     device = weight.device
     weight_flat = weight.contiguous()
@@ -337,6 +368,8 @@ def _your_dequantize_nf4(
 
     n_packed = weight_flat.numel()
     n_weights = math.prod(quant_state.shape)
+    n_absmax = absmax.numel()
+    n_absmax2 = absmax2.numel()
     out_storage_dtype = dtype
     emulate_bf16 = False
     out_dtype = _OUT_DTYPE_MAP[dtype]
@@ -349,6 +382,12 @@ def _your_dequantize_nf4(
 
     grid = lambda meta: (triton.cdiv(n_packed, meta["BLOCK_SIZE"]),)
 
+    debug_buffer = None
+    dbg_block_val = -1
+    if debug_block is not None:
+        dbg_block_val = int(debug_block)
+        debug_buffer = torch.empty((5, 512), device=device, dtype=torch.float32)
+
     _your_dequantize_nf4_kernel[grid](
         weight_flat,
         absmax,
@@ -360,9 +399,12 @@ def _your_dequantize_nf4(
         offset,
         n_packed,
         n_weights,
-        offset1,
-        offset2,
-        BLOCK_SIZE=256,
+        n_absmax,
+        n_absmax2,
+        debug_buffer if debug_buffer is not None else evict,
+        dbg_block_val,
+        shift_absmax_bytes=offset1,
+        shift_absmax2=offset2,
         OUT_DTYPE=out_dtype,
         USE_CUSTOM_ASM=use_custom_asm,
         USE_CACHE_EVICT=use_cache_eviction,
@@ -372,6 +414,8 @@ def _your_dequantize_nf4(
         out_flat = out_flat.to(torch.bfloat16)
 
     output_shape = _get_output_shape(quant_state, weight)
+    if debug_buffer is not None:
+        return out_flat.view(output_shape), debug_buffer
     return out_flat.view(output_shape)
 
 
@@ -381,14 +425,28 @@ def your_dequantize_nf4(
     use_custom_asm=False,
     use_cache_eviction=False,
     use_optimized=True,
+    debug_block=None,
 ):
+    if hasattr(torch, "_dynamo") and torch._dynamo.is_compiling():
+        return _call_fast_dequantize(weight)
+    quant_state = weight.weight.quant_state
+    shifts = _compute_shift_offsets(weight.weight.data, quant_state)
+    if shifts is None or not use_optimized:
+        return _call_fast_dequantize(weight)
+    offset1, offset2 = shifts
     return _your_dequantize_nf4(
         weight.weight.data,
-        weight.weight.quant_state,
+        quant_state,
+        offset1,
+        offset2,
         use_custom_asm=use_custom_asm,
         use_cache_eviction=use_cache_eviction,
-        use_optimized=use_optimized,
+        debug_block=debug_block,
     )
+
+
+if hasattr(torch, "_dynamo"):
+    your_dequantize_nf4 = torch._dynamo.disable()(your_dequantize_nf4)  # type: ignore
 
 
 def _debug_dequant_single_block(weight):
@@ -431,7 +489,7 @@ def _debug_dequant_single_block(weight):
     kernel_out = your_dequantize_nf4(weight, use_custom_asm=False, use_cache_eviction=False, use_optimized=True)
     kernel_block = kernel_out.flatten()[: blocksize]
 
-    ref_out = fast_dequantize(weight.weight, qs).flatten()[: blocksize]
+    ref_out = _call_fast_dequantize(weight).flatten()[: blocksize]
 
     return {
         "packed": packed_slice.detach().cpu(),

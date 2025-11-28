@@ -8,7 +8,7 @@ from challenges.challenge_a_nf4 import (
     MLP,
     mlp_forward,
     mlp_dequantize,
-    test_dequantize,
+    test_dequantize as run_test_dequantize,
     your_dequantize_nf4,
 )
 
@@ -21,7 +21,7 @@ cuda_only = pytest.mark.skipif(
 @cuda_only
 def test_your_dequantize_matches_reference():
     # Uses the provided harness which asserts correctness internally across fp16/bf16.
-    elapsed = test_dequantize(your_dequantize_nf4)
+    elapsed = run_test_dequantize(your_dequantize_nf4)
     assert elapsed > 0
 
 

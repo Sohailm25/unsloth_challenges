@@ -2,6 +2,7 @@
 # ABOUTME: Builds GPU image and executes pytest/test_dequantize remotely.
 
 import modal
+import sys
 
 
 image = (
@@ -13,7 +14,6 @@ image = (
         "bitsandbytes==0.43.1",
         "transformers>=4.41.0",
         "peft>=0.11.0",
-        "xformers==0.0.27.post1",
         "trl<0.9.0",
         "pytest",
     )
@@ -32,13 +32,20 @@ app = modal.App("nf4-challenge")
 def run_tests():
     import os
     import subprocess
+    sys.path.insert(0, "/workspace")
 
     os.chdir("/workspace")
-    subprocess.run([
-        "pytest",
-        "tests/test_challenge_a_nf4.py",
-        "-q",
-    ], check=True)
+    env = os.environ.copy()
+    env["PYTHONPATH"] = "/workspace:" + env.get("PYTHONPATH", "")
+    subprocess.run(
+        [
+            "pytest",
+            "tests/test_challenge_a_nf4.py",
+            "-q",
+        ],
+        check=True,
+        env=env,
+    )
 
 
 @app.function(
@@ -50,6 +57,9 @@ def run_benchmarks():
     import os
     import time
     import torch
+    import sys as _sys
+
+    _sys.path.insert(0, "/workspace")
     from challenges.challenge_a_nf4 import test_dequantize, your_dequantize_nf4, unsloth_dequantize
 
     os.chdir("/workspace")
