@@ -231,6 +231,21 @@ def _ensure_tensor(tensor, device, dtype=None):
     return target.contiguous()
 
 
+def _cached_on(qs, name, src, device, dtype):
+    cache_name = f"_cached_{name}"
+    cached = getattr(qs, cache_name, None)
+    if (
+        cached is None
+        or cached.device != device
+        or cached.dtype != dtype
+        or cached.numel() != src.numel()
+        or not cached.is_contiguous()
+    ):
+        cached = src.to(device=device, dtype=dtype, non_blocking=True).contiguous()
+        setattr(qs, cache_name, cached)
+    return cached
+
+
 @triton.autotune(
     configs=[
         triton.Config({"BLOCK_SIZE": 128, "LOAD_VEC": 4}, num_warps=4, num_stages=2),
@@ -383,10 +398,10 @@ def _your_dequantize_nf4(
         raise RuntimeError("NF4 packed size must be a multiple of 4 for LOAD_VEC=4 kernel.")
     weight_flat_u32 = weight_flat_u8.view(torch.int32)
 
-    absmax = _ensure_tensor(quant_state.absmax, device, torch.uint8)
-    absmax2 = _ensure_tensor(quant_state.state2.absmax, device, torch.float32)
-    code2 = _ensure_tensor(quant_state.state2.code, device, torch.float32)
-    lut = _ensure_tensor(quant_state.code, device, torch.float32)
+    absmax = _cached_on(quant_state, "absmax", quant_state.absmax, device, torch.uint8)
+    absmax2 = _cached_on(quant_state, "absmax2", quant_state.state2.absmax, device, torch.float32)
+    code2 = _cached_on(quant_state, "code2", quant_state.state2.code, device, torch.float32)
+    lut = _cached_on(quant_state, "lut", quant_state.code, device, torch.float32)
     if use_cache_eviction:
         cached_evict = getattr(quant_state, "_cached_evict", None)
         if cached_evict is None or cached_evict.numel() != weight_flat_u8.numel() or cached_evict.device != device:
