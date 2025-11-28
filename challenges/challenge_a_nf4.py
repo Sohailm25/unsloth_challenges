@@ -236,6 +236,7 @@ def _ensure_tensor(tensor, device, dtype=None):
         triton.Config({"BLOCK_SIZE": 256}, num_warps=4, num_stages=2),
         triton.Config({"BLOCK_SIZE": 512}, num_warps=4, num_stages=2),
         triton.Config({"BLOCK_SIZE": 512}, num_warps=8, num_stages=3),
+        triton.Config({"BLOCK_SIZE": 1024}, num_warps=8, num_stages=3),
     ],
     key=["n_packed"],
 )
@@ -265,6 +266,7 @@ def _your_dequantize_nf4_kernel(
     pid = tl.program_id(0)
     offs_local = tl.arange(0, BLOCK_SIZE)
     offs = pid * BLOCK_SIZE + offs_local
+    tl.multiple_of(offs, 4)
     mask = offs < n_packed
 
     if USE_CACHE_EVICT:
@@ -299,11 +301,26 @@ def _your_dequantize_nf4_kernel(
 
     offset = tl.load(offset_ptr).to(tl.float32)
     abs_mask = mask & (absmax_idx < n_absmax)
-    absmax_quant = tl.load(absmax_ptr + absmax_idx, mask=abs_mask, other=0).to(tl.int32)
+    absmax_quant = tl.load(
+        absmax_ptr + absmax_idx,
+        mask=abs_mask,
+        other=0,
+        eviction_policy="evict_last",
+    ).to(tl.int32)
     absmax_quant = tl.where(absmax_quant > 255, 0, absmax_quant)
-    code_val = tl.load(code2_ptr + absmax_quant, mask=abs_mask, other=0).to(tl.float32)
+    code_val = tl.load(
+        code2_ptr + absmax_quant,
+        mask=abs_mask,
+        other=0,
+        eviction_policy="evict_last",
+    ).to(tl.float32)
     abs2_mask = mask & (absmax2_idx < n_absmax2)
-    scale = tl.load(absmax2_ptr + absmax2_idx, mask=abs2_mask, other=1.0).to(tl.float32)
+    scale = tl.load(
+        absmax2_ptr + absmax2_idx,
+        mask=abs2_mask,
+        other=1.0,
+        eviction_policy="evict_last",
+    ).to(tl.float32)
     fma = getattr(tl, "fma", None)
     absmax = fma(code_val, scale, offset) if fma is not None else code_val * scale + offset
 
