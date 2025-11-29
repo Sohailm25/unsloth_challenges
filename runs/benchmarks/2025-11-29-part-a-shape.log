@@ -1,0 +1,230 @@
+## description of what was run, for what purpose
+Part A scatter-only with shape-parity slice (reacquire off, gather off, scatter on) after reshape fixes; goal: achieve BnB shape parity and measure runtime/loss.
+Command: modal run modal_challenge_b.py::run_part_a_kernel_training --use-part-a --no-use-torch-compile --max-steps 5 --disable-reacquire --disable-gather
+
+✓ Initialized. View run at 
+https://modal.com/apps/sohailm25/main/ap-nJE0JtaanElpwHMJDRSRr9
+✓ Created objects.
+├── 🔨 Created mount /Volumes/Extreme 
+│   Pro/unsloth-challenges/modal_challenge_b.py
+├── 🔨 Created mount challenge_b_train_with_part_a.py
+├── 🔨 Created mount challenge_b_train.py
+├── 🔨 Created mount /Volumes/Extreme Pro/unsloth-challenges/challenges
+├── 🔨 Created function run_fsdp_training.
+├── 🔨 Created function run_single_gpu_baseline.
+├── 🔨 Created function test_fsdp2_setup.
+└── 🔨 Created function run_part_a_kernel_training.
+============================================================
+FSDP2 + QLoRA + Part A kernel Training
+============================================================
+CUDA available: True
+GPU count: 2
+  GPU 0: Tesla T4
+  GPU 1: Tesla T4
+Part A env toggles: | reacquire=off | gather=off | scatter=on | gather_cache=off
+
+Running command: accelerate launch --config_file /tmp/fsdp_config.yaml /workspace/challenge_b_train_with_part_a.py --max_steps 5 --use_gradient_checkpointing --use_part_a_kernel
+
+PyTorch version: 2.9.1+cu128
+CUDA available: True
+CUDA device count: 2
+  GPU 0: Tesla T4
+  GPU 1: Tesla T4
+PyTorch version: 2.9.1+cu128
+CUDA available: True
+CUDA device count: 2
+  GPU 0: Tesla T4
+  GPU 1: Tesla T4
+============================================================
+Running FSDP2 + QLoRA  + Part A kernel DISTRIBUTED TRAINING
+============================================================
+============================================================
+Running FSDP2 + QLoRA  + Part A kernel DISTRIBUTED TRAINING
+============================================================
+[Gloo] Rank 0 is connected to 1 peer ranks. Expected number of connected peer ranks is : 1
+[Gloo] Rank 1 is connected to 1 peer ranks. Expected number of connected peer ranks is : 1
+Detected kernel version 4.4.0, which is below the recommended minimum of 5.5.0; this can cause the process to hang. It is recommended to upgrade the kernel to the minimum version or higher.
+World size: 2
+Local rank: 0
+Device: cuda:0
+Part A kernel ENABLED for NF4 dequantization
+Part A kernel ENABLED for NF4 dequantization
+Loading model: meta-llama/Llama-3.1-8B-Instruct
+`torch_dtype` is deprecated! Use `dtype` instead!
+`torch_dtype` is deprecated! Use `dtype` instead!
+
+[1ALoading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]
+[1ALoading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]
+[1ALoading checkpoint shards:  25%|██▌       | 1/4 [00:05<00:15,  5.29s/it]
+[1ALoading checkpoint shards:  25%|██▌       | 1/4 [00:05<00:16,  5.35s/it]
+[1ALoading checkpoint shards:  50%|█████     | 2/4 [00:12<00:12,  6.30s/it]
+[1ALoading checkpoint shards:  50%|█████     | 2/4 [00:12<00:13,  6.59s/it]
+[1ALoading checkpoint shards:  75%|███████▌  | 3/4 [00:19<00:06,  6.83s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:20<00:00,  4.35s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:20<00:00,  5.08s/it]
+
+[1ALoading checkpoint shards:  75%|███████▌  | 3/4 [00:20<00:07,  7.04s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:21<00:00,  4.50s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:21<00:00,  5.25s/it]
+
+[1AGenerating train split: 0 examples [00:00, ? examples/s]
+[1AGenerating train split: 23073 examples [00:00, 227515.72 examples/s]
+[1AGenerating train split: 92160 examples [00:00, 380950.50 examples/s]
+[1AGenerating train split: 138362 examples [00:00, 393081.18 examples/s]
+[1AGenerating train split: 207518 examples [00:00, 422249.39 examples/s]Generating train split: 210289 examples [00:00, 400609.53 examples/s]
+
+[1AAdding EOS to train dataset (num_proc=4):   0%|          | 0/21029 [00:00<?, ? examples/s]
+[1AAdding EOS to train dataset (num_proc=4):   2%|▏         | 427/21029 [00:00<00:46, 442.47 examples/s]
+[1AAdding EOS to train dataset (num_proc=4):   9%|▊         | 1808/21029 [00:01<00:16, 1177.66 examples/s]
+[1AAdding EOS to train dataset (num_proc=4):  23%|██▎       | 4892/21029 [00:01<00:04, 3777.74 examples/s]
+[1AAdding EOS to train dataset (num_proc=4):  64%|██████▎   | 13366/21029 [00:01<00:00, 12877.88 examples/s]Adding EOS to train dataset (num_proc=4): 100%|██████████| 21029/21029 [00:02<00:00, 9545.84 examples/s]
+
+[1ATokenizing train dataset (num_proc=4):   0%|          | 0/21029 [00:00<?, ? examples/s]
+[1ATokenizing train dataset (num_proc=4):   0%|          | 14/21029 [00:03<1:39:54,  3.51 examples/s]
+[1ATokenizing train dataset (num_proc=4):   1%|          | 130/21029 [00:04<08:59, 38.77 examples/s]
+[1ATokenizing train dataset (num_proc=4):   1%|          | 221/21029 [00:04<04:59, 69.41 examples/s]
+[1ATokenizing train dataset (num_proc=4):   2%|▏         | 480/21029 [00:04<01:41, 201.65 examples/s]
+[1ATokenizing train dataset (num_proc=4):   4%|▍         | 847/21029 [00:04<00:46, 433.82 examples/s]
+[1ATokenizing train dataset (num_proc=4):   5%|▌         | 1067/21029 [00:05<00:33, 590.34 examples/s]
+[1ATokenizing train dataset (num_proc=4):   6%|▌         | 1297/21029 [00:05<00:25, 780.02 examples/s]
+[1ATokenizing train dataset (num_proc=4):   7%|▋         | 1573/21029 [00:05<00:19, 980.03 examples/s]
+[1ATokenizing train dataset (num_proc=4):   9%|▉         | 1997/21029 [00:05<00:12, 1482.67 examples/s]
+[1ATokenizing train dataset (num_proc=4):  11%|█         | 2365/21029 [00:05<00:10, 1772.77 examples/s]
+[1ATokenizing train dataset (num_proc=4):  13%|█▎        | 2773/21029 [00:05<00:08, 2199.05 examples/s]
+[1ATokenizing train dataset (num_proc=4):  16%|█▋        | 3430/21029 [00:05<00:05, 3067.81 examples/s]
+[1ATokenizing train dataset (num_proc=4):  20%|█▉        | 4143/21029 [00:05<00:04, 3759.60 examples/s]
+[1ATokenizing train dataset (num_proc=4):  22%|██▏       | 4612/21029 [00:06<00:04, 3737.79 examples/s]
+[1ATokenizing train dataset (num_proc=4):  24%|██▍       | 5069/21029 [00:06<00:04, 3894.01 examples/s]
+[1ATokenizing train dataset (num_proc=4):  27%|██▋       | 5669/21029 [00:06<00:03, 4416.46 examples/s]
+[1ATokenizing train dataset (num_proc=4):  30%|██▉       | 6294/21029 [00:06<00:03, 4890.56 examples/s]
+[1ATokenizing train dataset (num_proc=4):  33%|███▎      | 6965/21029 [00:06<00:02, 5385.31 examples/s]
+[1ATokenizing train dataset (num_proc=4):  37%|███▋      | 7862/21029 [00:06<00:02, 6383.20 examples/s]
+[1ATokenizing train dataset (num_proc=4):  42%|████▏     | 8741/21029 [00:06<00:01, 7062.67 examples/s]
+[1ATokenizing train dataset (num_proc=4):  46%|████▌     | 9706/21029 [00:06<00:01, 7804.08 examples/s]
+[1ATokenizing train dataset (num_proc=4):  50%|█████     | 10603/21029 [00:06<00:01, 8142.18 examples/s]
+[1ATokenizing train dataset (num_proc=4):  54%|█████▍    | 11451/21029 [00:06<00:01, 8229.49 examples/s]
+[1ATokenizing train dataset (num_proc=4):  59%|█████▉    | 12439/21029 [00:07<00:01, 8455.64 examples/s]
+[1ATokenizing train dataset (num_proc=4):  64%|██████▍   | 13432/21029 [00:07<00:00, 8863.74 examples/s]
+[1ATokenizing train dataset (num_proc=4):  68%|██████▊   | 14338/21029 [00:07<00:00, 8624.48 examples/s]
+[1ATokenizing train dataset (num_proc=4):  72%|███████▏  | 15219/21029 [00:07<00:00, 8666.50 examples/s]
+[1ATokenizing train dataset (num_proc=4):  77%|███████▋  | 16129/21029 [00:07<00:00, 8488.64 examples/s]
+[1ATokenizing train dataset (num_proc=4):  81%|████████  | 17057/21029 [00:07<00:00, 8709.63 examples/s]
+[1ATokenizing train dataset (num_proc=4):  85%|████████▌ | 17970/21029 [00:07<00:00, 8799.14 examples/s]
+[1ATokenizing train dataset (num_proc=4):  90%|█████████ | 18976/21029 [00:07<00:00, 8002.68 examples/s]
+[1ATokenizing train dataset (num_proc=4):  94%|█████████▍| 19871/21029 [00:08<00:00, 6654.52 examples/s]
+[1ATokenizing train dataset (num_proc=4):  98%|█████████▊| 20605/21029 [00:08<00:00, 5943.05 examples/s]Tokenizing train dataset (num_proc=4): 100%|██████████| 21029/21029 [00:08<00:00, 2447.64 examples/s]
+
+[1ATruncating train dataset (num_proc=4):   0%|          | 0/21029 [00:00<?, ? examples/s]
+[1ATruncating train dataset (num_proc=4):   5%|▍         | 1000/21029 [00:00<00:13, 1473.03 examples/s]Truncating train dataset (num_proc=4): 100%|██████████| 21029/21029 [00:00<00:00, 25073.76 examples/s]
+Detected kernel version 4.4.0, which is below the recommended minimum of 5.5.0; this can cause the process to hang. It is recommended to upgrade the kernel to the minimum version or higher.
+Trainable params: 167,772,160 (5.66%)
+Starting FSDP2 training...
+The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'eos_token_id': 128009, 'pad_token_id': 128009}.
+The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'eos_token_id': 128009, 'pad_token_id': 128009}.
+/usr/local/lib/python3.11/site-packages/accelerate/utils/fsdp_utils.py:715: UserWarning: FSDP upcast of low precision parameters to fp32 (since mixed_precision != 'no') may affect the precision of model checkpoints.
+  warnings.warn(
+
+[1A  0%|          | 0/5 [00:00<?, ?it/s]/usr/local/lib/python3.11/site-packages/torch/_dynamo/eval_frame.py:1044: UserWarning: torch.utils.checkpoint: the use_reentrant parameter should be passed explicitly. Starting in PyTorch 2.9, calling checkpoint without use_reentrant will raise an exception. use_reentrant=False is recommended, but if you need to preserve the current default behavior, you can pass use_reentrant=True. Refer to docs for more details on the differences between the two variants.
+  return fn(*args, **kwargs)
+/usr/local/lib/python3.11/site-packages/torch/_dynamo/eval_frame.py:1044: UserWarning: torch.utils.checkpoint: the use_reentrant parameter should be passed explicitly. Starting in PyTorch 2.9, calling checkpoint without use_reentrant will raise an exception. use_reentrant=False is recommended, but if you need to preserve the current default behavior, you can pass use_reentrant=True. Refer to docs for more details on the differences between the two variants.
+  return fn(*args, **kwargs)
+[FSDP DEBUG rank=1] A.numel=4194304, full_elements=16777216
+[FSDP DEBUG rank=1] absmax.numel=262144, world_size=2
+[FSDP DEBUG rank=0] A.numel=4194304, full_elements=16777216
+[FSDP DEBUG rank=0] absmax.numel=262144, world_size=2
+[SHIFT DEBUG] n_bytes=4194304, n_weights_effective=8388608
+[SHIFT DEBUG] blocksize=64, bytes_per_absmax=32
+[SHIFT DEBUG] blocksize2=256
+[SHIFT DEBUG] Success! shifts=(5, 8)
+[SHIFT DEBUG] n_bytes=4194304, n_weights_effective=8388608
+[SHIFT DEBUG] blocksize=64, bytes_per_absmax=32
+[SHIFT DEBUG] blocksize2=256
+[SHIFT DEBUG] Success! shifts=(5, 8)
+[PartA FSDP] rank=0 path=scatter shape=torch.Size([4096, 4096])
+[PartA FSDP] rank=1 path=scatter shape=torch.Size([4096, 4096])
+[PartA FSDP] rank=1 mismatch vs BnB shape torch.Size([1024, 4096]) != (4096, 1024), falling back
+Part A kernel failed (call #1): shape mismatch vs BnB
+[PartA FSDP] rank=0 mismatch vs BnB shape torch.Size([1024, 4096]) != (4096, 1024), falling back
+Part A kernel failed (call #1): shape mismatch vs BnB
+[BnB DEBUG rank=1 call=0] A.numel=1048576, result.shape=torch.Size([4096, 1024]), quant_state.shape=(1024, 4096)
+[PartA FSDP] rank=1 mismatch vs BnB shape torch.Size([1024, 4096]) != (4096, 1024), falling back
+Part A kernel failed (call #2): shape mismatch vs BnB
+[BnB DEBUG rank=0 call=0] A.numel=1048576, result.shape=torch.Size([4096, 1024]), quant_state.shape=(1024, 4096)
+[BnB DEBUG rank=1 call=1] A.numel=1048576, result.shape=torch.Size([4096, 1024]), quant_state.shape=(1024, 4096)
+[PartA FSDP] rank=0 mismatch vs BnB shape torch.Size([1024, 4096]) != (4096, 1024), falling back
+Part A kernel failed (call #2): shape mismatch vs BnB
+Traceback (most recent call last):
+  File "/workspace/challenge_b_train_with_part_a.py", line 729, in patched_dequantize_4bit
+    raise RuntimeError("shape mismatch vs BnB")
+RuntimeError: shape mismatch vs BnB
+Traceback (most recent call last):
+  File "/workspace/challenge_b_train_with_part_a.py", line 729, in patched_dequantize_4bit
+    raise RuntimeError("shape mismatch vs BnB")
+RuntimeError: shape mismatch vs BnB
+Traceback (most recent call last):
+  File "/workspace/challenge_b_train_with_part_a.py", line 729, in patched_dequantize_4bit
+    raise RuntimeError("shape mismatch vs BnB")
+RuntimeError: shape mismatch vs BnB
+Traceback (most recent call last):
+  File "/workspace/challenge_b_train_with_part_a.py", line 729, in patched_dequantize_4bit
+    raise RuntimeError("shape mismatch vs BnB")
+RuntimeError: shape mismatch vs BnB
+[BnB DEBUG rank=0 call=1] A.numel=1048576, result.shape=torch.Size([4096, 1024]), quant_state.shape=(1024, 4096)
+[PartA FSDP] rank=1 mismatch vs BnB shape torch.Size([14336, 4096]) != (4096, 14336), falling back
+Part A kernel failed (call #3): shape mismatch vs BnB
+[PartA FSDP] rank=0 mismatch vs BnB shape torch.Size([14336, 4096]) != (4096, 14336), falling back
+Part A kernel failed (call #3): shape mismatch vs BnB
+[BnB DEBUG rank=1 call=2] A.numel=14680064, result.shape=torch.Size([4096, 14336]), quant_state.shape=(14336, 4096)
+[BnB DEBUG rank=0 call=2] A.numel=14680064, result.shape=torch.Size([4096, 14336]), quant_state.shape=(14336, 4096)
+Traceback (most recent call last):
+  File "/workspace/challenge_b_train_with_part_a.py", line 729, in patched_dequantize_4bit
+    raise RuntimeError("shape mismatch vs BnB")
+RuntimeError: shape mismatch vs BnB
+Traceback (most recent call last):
+  File "/workspace/challenge_b_train_with_part_a.py", line 729, in patched_dequantize_4bit
+    raise RuntimeError("shape mismatch vs BnB")
+RuntimeError: shape mismatch vs BnB
+[PartA FSDP] rank=1 mismatch vs BnB shape torch.Size([14336, 4096]) != (4096, 14336), falling back
+[BnB DEBUG rank=1 call=3] A.numel=14680064, result.shape=torch.Size([4096, 14336]), quant_state.shape=(14336, 4096)
+[BnB DEBUG rank=1 call=4] A.numel=14680064, result.shape=torch.Size([14336, 4096]), quant_state.shape=(4096, 14336)
+[PartA FSDP] rank=0 mismatch vs BnB shape torch.Size([14336, 4096]) != (4096, 14336), falling back
+[BnB DEBUG rank=0 call=3] A.numel=14680064, result.shape=torch.Size([4096, 14336]), quant_state.shape=(14336, 4096)
+/usr/local/lib/python3.11/site-packages/torch/_dynamo/eval_frame.py:1044: UserWarning: torch.utils.checkpoint: the use_reentrant parameter should be passed explicitly. Starting in PyTorch 2.9, calling checkpoint without use_reentrant will raise an exception. use_reentrant=False is recommended, but if you need to preserve the current default behavior, you can pass use_reentrant=True. Refer to docs for more details on the differences between the two variants.
+  return fn(*args, **kwargs)
+[BnB DEBUG rank=0 call=4] A.numel=14680064, result.shape=torch.Size([14336, 4096]), quant_state.shape=(4096, 14336)
+/usr/local/lib/python3.11/site-packages/torch/_dynamo/eval_frame.py:1044: UserWarning: torch.utils.checkpoint: the use_reentrant parameter should be passed explicitly. Starting in PyTorch 2.9, calling checkpoint without use_reentrant will raise an exception. use_reentrant=False is recommended, but if you need to preserve the current default behavior, you can pass use_reentrant=True. Refer to docs for more details on the differences between the two variants.
+  return fn(*args, **kwargs)
+ 20%|██        | 1/5 [00:42<02:48, 42.00s/it]                                   
+{'loss': 13.5059, 'grad_norm': nan, 'learning_rate': 0.0, 'entropy': 9.240234375, 'num_tokens': 1527.0, 'mean_token_accuracy': 0.0, 'epoch': 0.0}
+[1A 20%|██        | 1/5 [00:42<02:48, 42.00s/it] 40%|████      | 2/5 [01:12<01:45, 35.21s/it]                                   
+{'loss': 13.4575, 'grad_norm': nan, 'learning_rate': 0.0, 'entropy': 9.236328125, 'num_tokens': 2854.0, 'mean_token_accuracy': 0.0, 'epoch': 0.0}
+[1A 40%|████      | 2/5 [01:12<01:45, 35.21s/it]
+[1A 60%|██████    | 3/5 [01:43<01:06, 33.49s/it]                               
+{'loss': 13.5107, 'grad_norm': 4.114118576049805, 'learning_rate': 0.0, 'entropy': 9.205078125, 'num_tokens': 4498.0, 'mean_token_accuracy': 0.0, 'epoch': 0.0}
+[1A 60%|██████    | 3/5 [01:43<01:06, 33.49s/it]
+{'loss': 13.541, 'grad_norm': 6.348438262939453, 'learning_rate': 2e-05, 'entropy': 9.2265625, 'num_tokens': 6194.0, 'mean_token_accuracy': 0.0, 'epoch': 0.0}
+[1A 80%|████████  | 4/5 [02:15<00:32, 32.69s/it]                               
+[1A 80%|████████  | 4/5 [02:15<00:32, 32.69s/it]100%|██████████| 5/5 [02:45<00:00, 31.86s/it]                                             100%|██████████| 5/5 [02:45<00:00, 31.86s/it]                                             100%|██████████| 5/5 [02:45<00:00, 31.86s/it]100%|██████████| 5/5 [02:45<00:00, 33.15s/it]
+{'loss': 13.1133, 'grad_norm': nan, 'learning_rate': 1.5000000000000002e-05, 'entropy': 9.13671875, 'num_tokens': 7665.0, 'mean_token_accuracy': 0.0, 'epoch': 0.0}
+{'train_runtime': 165.754, 'train_samples_per_second': 0.483, 'train_steps_per_second': 0.03, 'train_loss': 13.42568359375, 'epoch': 0.0}
+
+============================================================
+FSDP2 TRAINING RESULTS
+============================================================
+Final loss: 13.4257
+Training time: 188.40s
+Loss curve (first 10): [13.5059, 13.4575, 13.5107, 13.541, 13.1133]
+Loss curve (last 10): [13.5059, 13.4575, 13.5107, 13.541, 13.1133]
+
+----------------------------------------
+Dequantization Statistics:
+  Part A kernel calls: 13440
+  Part A kernel time: 124.2332s
+  BnB calls: 9600
+  BnB time: 2.0030s
+  Fallback calls (errors): 9600
+  Total dequant calls: 23040
+  Per-call speedup: 0.02x
+----------------------------------------
+[rank0]:[W1129 09:05:56.805328277 ProcessGroupNCCL.cpp:1524] Warning: WARNING: destroy_process_group() was not called before program exit, which can leak resources. For more info, please see https://pytorch.org/docs/stable/distributed.html#shutdown (function operator())
+[rank1]:[W1129 09:05:57.983126451 AllocatorConfig.cpp:28] Warning: PYTORCH_CUDA_ALLOC_CONF is deprecated, use PYTORCH_ALLOC_CONF instead (function operator())
+[rank0]:[W1129 09:05:57.065708235 AllocatorConfig.cpp:28] Warning: PYTORCH_CUDA_ALLOC_CONF is deprecated, use PYTORCH_ALLOC_CONF instead (function operator())
+Stopping app - local entrypoint completed.
+✓ App completed. View run at 
+https://modal.com/apps/sohailm25/main/ap-nJE0JtaanElpwHMJDRSRr9

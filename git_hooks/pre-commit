@@ -1,0 +1,12 @@
+#!/bin/sh
+# ABOUTME: Ensures critical Part A FSDP helper tests pass before commit.
+# ABOUTME: Activates .venv if present and runs focused pytest suite.
+
+set -e
+
+if [ -d ".venv" ]; then
+  # shellcheck disable=SC1091
+  . ".venv/bin/activate"
+fi
+
+python -m pytest tests/test_part_a_fsdp_paths.py
