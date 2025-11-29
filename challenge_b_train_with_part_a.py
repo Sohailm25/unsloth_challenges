@@ -788,9 +788,12 @@ def _run_part_a(A_tensor, qs_tensor, output_shape):
     _DEQUANT_TIMES["count"] += 1
     if result is None:
         # Extremely defensive: ensure we never propagate None to matmul
+        rank_dbg, world_dbg = _get_fsdp_rank_info()
+        bnb_shape_dbg = getattr(quant_state, "_bnb_ref_shape", None)
+        print(f"[PartA FSDP] rank={rank_dbg} BnB returned None (A.numel={A.numel()}, bnb_shape={bnb_shape_dbg}, world={world_dbg})", flush=True)
         result = _ORIGINAL_BNB_DEQUANT(A, quant_state, absmax, out, blocksize, quant_type)
         if result is None:
-            raise RuntimeError("BnB dequantize_4bit returned None")
+            raise RuntimeError("BnB dequantize_4bit returned None twice")
 
     # Debug: check what BnB returns (track first few calls with different sizes)
     if not hasattr(patched_dequantize_4bit, '_bnb_call_count'):
