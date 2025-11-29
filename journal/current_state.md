@@ -175,12 +175,13 @@ Current status: all-gather path now achieves non-zero Part A calls under FSDP2, 
 | Graph break | A100 | PASS | SDPA + dynamic shapes |
 | Training (SDPA) | A100 | PASS | 10/10 steps, avg loss=5.077, 220.4s (ap-RNpI3j2IpLRgL7635jMJnR) |
 | **Training (flex_attention + doc masking)** | A100 | **PASS** | 10/10 steps, **train_loss=4.49**, 295.3s (ap-kJVLz7NzvjA7TvX6McoICT) |
+| **Verified (graph break fix)** | A100 | **PASS** | 10/10 steps, **train_loss=4.48**, 300.4s (ap-5XscFmwAXCwNweFrONQ159) |
 
-**A100 Environment (Session 17 - 2025-11-29):**
+**A100 Environment (Session 17/18 - 2025-11-29):**
 - PyTorch: 2.9.1+cu126
 - GPU: NVIDIA A100-SXM4-40GB (sm80)
 - **flex_attention: ENABLED with document boundary masking**
-- **Final Training App ID: `ap-kJVLz7NzvjA7TvX6McoICT`** (flex_attention + packing=True)
+- **Final Training App ID: `ap-5XscFmwAXCwNweFrONQ159`** (verified with graph break fix)
 
 **Compiled Components:**
 - LlamaMLP: `fullgraph=False, dynamic=True, max_autotune=True`
