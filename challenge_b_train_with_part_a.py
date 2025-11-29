@@ -496,6 +496,9 @@ def _scatter_local_to_full(local_out, quant_state, A, rank, world):
     if local_rows != rows // world:
         return None
 
+    if local_out.dim() == 1 and local_out.numel() == local_rows * cols:
+        local_out = local_out.view(local_rows, cols)
+
     out_full = torch.zeros((rows, cols), device=local_out.device, dtype=local_out.dtype)
     row_start = rank * local_rows
     out_full[row_start : row_start + local_rows] = local_out
@@ -698,8 +701,13 @@ def patched_dequantize_4bit(A, quant_state, absmax=None, out=None, blocksize=64,
                 if is_fsdp_sharded and _ENABLE_SCATTER:
                     eff_qs = _slice_quant_state_for_fsdp(quant_state, A, rank, world_size)
                     if eff_qs is not None:
-                        qs_for_shape = _wrap_quant_state_with_shape(eff_qs, target_shape)
-                        local = _run_part_a(A, qs_for_shape, None)
+                        shard_shape = getattr(eff_qs, "shape", None)
+                        qs_for_shape = _wrap_quant_state_with_shape(
+                            eff_qs,
+                            shard_shape if shard_shape is not None else target_shape,
+                        )
+                        local_shape = shard_shape if shard_shape is not None else None
+                        local = _run_part_a(A, qs_for_shape, local_shape)
                         if local is not None:
                             out_full = _scatter_local_to_full(local, quant_state, A, rank, world_size)
                             if out_full is not None:

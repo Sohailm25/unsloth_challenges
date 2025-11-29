@@ -113,6 +113,8 @@
 - BnB baseline (`modal_challenge_b.py::run_part_a_kernel_training --no-use-part-a --max-steps 5`, app `ap-jlnjfaoYpKtz28v66lagE0`): train_time=162.09s, train_loss=6.8971, steps/s=0.035.
 - Part A all-gather path (`--use-part-a --max-steps 5`, app `ap-qOac72pFSi2fTtJvjg1OWf`): train_time=266.33s, train_loss=13.95, part_a_calls=13,440, part_a_time=200.73s (BnB calls=0). Loss is far worse than BnB and runtime is slower.
 - Part A with gather cache enabled (app `ap-jXv1Vo3SxW3fwRmXRyomlq`): failed at step 0 with CUDA OOM (112MB alloc) while caching full packed bytes. Default remains cache-off.
+- Part A scatter-only pre-fix (reacquire/gather off, app `ap-pguabUVvocoBAWzXfTexkI`): train_time=192.15s, train_loss=6.8971; part_a_calls=13,440 and equal BnB calls due to shape mismatches; per-call speedup 0.02x.
+- Part A scatter-only after reshaping local output (reacquire/gather off, app `ap-plgw0ijiBY9cah0cCEfhqH`): train_time=181.96s, train_loss=13.43; part_a_calls=13,440, bnb_calls=9,600 from shape-mismatch fallbacks; per-call speedup 0.02x. Part A outputs still mismatch BnB (scatter yields (4096,4096) vs BnB (1024,4096)), so losses remain poor.
 
 **Part A Kernel Integration Notes (+3 gap):**
 
@@ -158,7 +160,7 @@ Current status: all-gather path now achieves non-zero Part A calls under FSDP2, 
 
 ## Challenge C: torch.compile for QLoRA
 
-**Status: COMPLETE (6/9 Points - flex_attention disabled; requires document boundary masking)**
+**Status: COMPLETE (9/9 Points - flex_attention + document boundary masking WORKING)**
 
 - Implementation: `challenges/challenge_c_solution.py`
 - Modal harness: `modal_challenge_c.py`
@@ -171,64 +173,55 @@ Current status: all-gather path now achieves non-zero Part A calls under FSDP2, 
 | Graph break | T4 | PASS | Dynamic seq lengths (2, 8, 16 tokens) |
 | Training | T4 | PASS | 10/10 steps, loss=2.394, 121.1s |
 | Graph break | A100 | PASS | SDPA + dynamic shapes |
-| Training | A100 | **PASS** | 10/10 steps, avg loss=5.077, 220.4s (ap-RNpI3j2IpLRgL7635jMJnR) |
+| Training (SDPA) | A100 | PASS | 10/10 steps, avg loss=5.077, 220.4s (ap-RNpI3j2IpLRgL7635jMJnR) |
+| **Training (flex_attention + doc masking)** | A100 | **PASS** | 10/10 steps, **train_loss=4.49**, 295.3s (ap-kJVLz7NzvjA7TvX6McoICT) |
 
-**A100 Environment (Session 14-15 - 2025-11-29):**
+**A100 Environment (Session 17 - 2025-11-29):**
 - PyTorch: 2.9.1+cu126
 - GPU: NVIDIA A100-SXM4-40GB (sm80)
-- flex_attention: TEMPORARILY DISABLED (see investigation below)
-- Debug App ID: `ap-1UTnta6YUqh0LC7wQPYluw` (flex_attention debug test)
-- **Training App ID: `ap-RNpI3j2IpLRgL7635jMJnR`** (SDPA path - VERIFIED WORKING)
+- **flex_attention: ENABLED with document boundary masking**
+- **Final Training App ID: `ap-kJVLz7NzvjA7TvX6McoICT`** (flex_attention + packing=True)
 
 **Compiled Components:**
 - LlamaMLP: `fullgraph=False, dynamic=True, max_autotune=True`
-- LlamaAttention: **SDPA on all GPUs** (flex_attention disabled)
+- LlamaAttention: **flex_attention on A100+** with document-aware causal mask, SDPA on T4
 - LlamaRMSNorm: `fullgraph=True`
 - LlamaForCausalLM.forward: **`patch_llama_loss()` intercepts labels → compiled cross-entropy**
 - BnB Linear4bit: `custom_op` path (in-graph, no dynamo.disable)
 - PEFT LoRA: Scaling values converted to tensor buffers
 
-**flex_attention + packing=True Investigation (Session 14-16 - ROOT CAUSE FOUND):**
+**Document Boundary Masking Implementation (Session 17 - FIX IMPLEMENTED):**
 
-Initial observation: 193% loss difference between flex_attention and SDPA.
+Successfully implemented document-aware causal masking for flex_attention with packing=True:
 
-**Investigation Attempts:**
-1. **Synthetic test**: flex_attention vs SDPA on raw Q,K,V tensors → **PASS** (max diff 0.002)
-2. **Full model test with packing=False**: SDPA loss=5.077 (stable)
-3. **Full model test with packing=True + flex_attention**: avg loss=10.03 (2x higher!)
+1. **`_compute_doc_ids(position_ids)`**: Detects document boundaries from position_ids resets
+   - With packing, TRL resets position_ids at document boundaries: `[0,1,2,0,1,0,1,2,3]`
+   - Function uses `cumsum` to assign document IDs: `[0,0,0,1,1,2,2,2,2]`
 
-**Root Cause Identified:**
-The issue is **NOT** in flex_attention itself. The problem is **document cross-contamination** when using TRL's packing:
+2. **`_create_document_causal_block_mask(doc_ids, ...)`**: Creates document-aware BlockMask
+   - `mask_mod = lambda b,h,q,kv: (q >= kv) & (doc_ids[b,q] == doc_ids[b,kv])`
+   - Enforces both causal ordering AND same-document constraint
 
-- TRL's `packing=True` concatenates multiple documents into a single sequence
-- flex_attention uses a pure causal mask (`q_idx >= kv_idx`)
-- This allows tokens from different documents to attend to each other
-- TRL explicitly warns: "Packing gathers multiple samples into a single sequence, and only flash_attention_2/3 implementations are known to reliably support this"
+3. **flex_attention forward**: Always uses document masking when position_ids is available
+   - Eliminates graph breaks by not checking `_has_multiple_documents()` at runtime
+   - flex_attention only enabled on A100+ with packing=True anyway
 
-**Test Results (Session 16):**
+**Loss Comparison (Session 17):**
 | Configuration | Avg Loss | Notes |
 |--------------|----------|-------|
-| SDPA + packing=False | ~5.0 | Baseline (stable) |
-| flex_attention + packing=True | ~10.0 | 2x higher - cross-contamination |
+| SDPA + packing=False | ~5.0 | Baseline |
+| flex_attention + packing=True (broken) | ~10.0 | Cross-contamination |
+| **flex_attention + doc masking + packing=True** | **~4.5** | **FIXED** |
 
-**Final Fix Applied:**
-```python
-# In patch_llama_attention():
-can_use_flex = False  # Disabled - causes cross-contamination with packing
+**Final Scoring Assessment (9/9 points):**
+- ✅ BnB via custom_op: avoid -2 points (no dynamo.disable)
+- ✅ **flex_attention + document masking on A100+: +3 points** (WORKING)
+- ✅ MLP compiled: +1 point
+- ✅ Loss compiled via patch_llama_loss(): avoid -1 point
+- ✅ LayerNorms compiled: avoid -3
+- ✅ max_autotune enabled: +2 points (verified via autotune stats in logs)
 
-# In SFTConfig:
-packing=False  # SDPA uses attention_mask for padding
-```
-Now using SDPA on all GPUs with packing=False for stable training.
-
-**To achieve +3 points (flex_attention):**
-Would require implementing proper document boundary masking in flex_attention's mask_mod function.
-This is non-trivial and not implemented.
-
-**Scoring Impact:**
-- flex_attention + dynamic sequence lengths: ~~+3 points~~ (disabled)
-- Using SDPA: +2 points for compiled attention still achieved
-- Current estimate: 6/9 points (was 9/9)
+**Total: 9/9 points** (flex_attention +3 achieved!)
 
 **custom_op Integration (Session 10):**
 Implemented `torch.library.custom_op` pattern per Oracle (gpt-5-pro) research:
@@ -254,16 +247,8 @@ Critical finding: SFTTrainer uses its own internal loss computation, ignoring an
 - Returns `CausalLMOutputWithPast` with compiled loss
 - Verified working on A100: `[Challenge C] Patched LlamaForCausalLM.forward with compiled loss`
 
-**Final Scoring Assessment (6/9 points):**
-- ✅ BnB via custom_op: avoid -2 points (no dynamo.disable)
-- ✅ Attention compiled (SDPA): +2 points (flex_attention disabled)
-- ❌ flex_attention + dynamic sequence lengths: ~~+3 points~~ (requires document boundary masking)
-- ✅ MLP compiled: +1 point
-- ✅ Loss compiled via patch_llama_loss(): avoid -1 point
-- ✅ LayerNorms compiled: avoid -3
-- ✅ max_autotune enabled: +2 points (verified via autotune stats in logs)
-
-**Total: 6/9 points** (missing +3 for flex_attention)
+**Previous Scoring Assessment (6/9 points - NOW OBSOLETE):**
+_(See Session 17 above for current 9/9 scoring)_
 
 ---
 

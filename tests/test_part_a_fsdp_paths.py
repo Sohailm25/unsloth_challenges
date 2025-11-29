@@ -112,3 +112,16 @@ def test_scatter_local_to_full_places_rows_correctly():
     assert full.shape == torch.Size([4, 2])
     assert torch.equal(full[:2], torch.zeros_like(full[:2]))
     assert torch.equal(full[2:], local_out)
+
+
+def test_scatter_accepts_flat_local_out():
+    qs = types.SimpleNamespace(shape=(4, 2))
+    rank = 0
+    world = 2
+    A_local = torch.zeros(2, dtype=torch.uint8)
+    flat_local = torch.ones(4, dtype=torch.float32)  # should reshape to (2, 2)
+
+    full = _scatter_local_to_full(flat_local, qs, A_local, rank, world)
+    assert full.shape == torch.Size([4, 2])
+    assert torch.equal(full[:2], torch.ones_like(full[:2]))
+    assert torch.equal(full[2:], torch.zeros_like(full[2:]))

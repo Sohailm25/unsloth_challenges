@@ -22,7 +22,9 @@ image = (
         "hf_transfer",
         "triton",
     )
+    .add_local_dir("challenges", "/workspace/challenges")
     .add_local_file("challenge_b_train.py", "/workspace/challenge_b_train.py")
+    .add_local_file("challenge_b_train_with_part_a.py", "/workspace/challenge_b_train_with_part_a.py")
 )
 
 app = modal.App("fsdp2-qlora-challenge-b")
@@ -272,13 +274,99 @@ def test_fsdp2_setup():
     return "Setup test completed"
 
 
+@app.function(
+    image=image,
+    gpu="T4:2",
+    timeout=3600,
+    secrets=[modal.Secret.from_name("huggingface-secret")],
+)
+def run_part_a_kernel_training(
+    max_steps: int = 60,
+    use_part_a: bool = True,
+    use_torch_compile: bool = False,
+    disable_reacquire: bool = False,
+    disable_gather: bool = False,
+    disable_scatter: bool = False,
+    enable_gather_cache: bool = False,
+):
+    """Run FSDP2 + QLoRA training with Part A NF4 kernel."""
+    import subprocess
+
+    os.chdir("/workspace")
+
+    config_content = FSDP2_CONFIG
+    kernel_str = "Part A kernel" if use_part_a else "BnB"
+    compile_str = " + torch.compile" if use_torch_compile else ""
+
+    # Write accelerate config
+    config_path = "/tmp/fsdp_config.yaml"
+    with open(config_path, "w") as f:
+        f.write(config_content)
+
+    print("=" * 60)
+    print(f"FSDP2 + QLoRA + {kernel_str}{compile_str} Training")
+    print("=" * 60)
+
+    import torch
+    print(f"CUDA available: {torch.cuda.is_available()}")
+    print(f"GPU count: {torch.cuda.device_count()}")
+    for i in range(torch.cuda.device_count()):
+        print(f"  GPU {i}: {torch.cuda.get_device_name(i)}")
+
+    cmd = [
+        "accelerate", "launch",
+        "--config_file", config_path,
+        "/workspace/challenge_b_train_with_part_a.py",
+        "--max_steps", str(max_steps),
+        "--use_gradient_checkpointing",
+    ]
+    if use_part_a:
+        cmd.append("--use_part_a_kernel")
+    if use_torch_compile:
+        cmd.append("--use_torch_compile")
+
+    env = {**os.environ, "HF_HUB_ENABLE_HF_TRANSFER": "1"}
+    if disable_reacquire:
+        env["ORACLE_PARTA_REACQUIRE"] = "0"
+    if disable_gather:
+        env["ORACLE_PARTA_GATHER"] = "0"
+    if disable_scatter:
+        env["ORACLE_PARTA_SCATTER_FALLBACK"] = "0"
+    if enable_gather_cache:
+        env["ORACLE_PARTA_GATHER_CACHE"] = "1"
+
+    if use_part_a:
+        print("Part A env toggles:",
+              f"reacquire={'off' if disable_reacquire else 'on'}",
+              f"gather={'off' if disable_gather else 'on'}",
+              f"scatter={'off' if disable_scatter else 'on'}",
+              f"gather_cache={'on' if enable_gather_cache else 'off'}",
+              sep=" | ")
+
+    print(f"\nRunning command: {' '.join(cmd)}\n")
+
+    result = subprocess.run(
+        cmd,
+        capture_output=False,
+        text=True,
+        env=env,
+    )
+
+    return result.returncode
+
+
 @app.local_entrypoint()
 def main(
     test_only: bool = False,
     baseline: bool = False,
     fsdp2: bool = False,
     compile: bool = False,
+    part_a: bool = False,
     max_steps: int = 60,
+    disable_reacquire: bool = False,
+    disable_gather: bool = False,
+    disable_scatter: bool = False,
+    enable_gather_cache: bool = False,
 ):
     """
     Run Challenge B FSDP + QLoRA training.
@@ -288,7 +376,12 @@ def main(
         baseline: Run single GPU baseline for comparison
         fsdp2: Use FSDP2 instead of FSDP1
         compile: Enable torch.compile for the model
+        part_a: Use Part A NF4 kernel instead of BnB
         max_steps: Number of training steps
+        disable_reacquire: Disable Part A reacquire path
+        disable_gather: Disable Part A all-gather path
+        disable_scatter: Disable Part A scatter fallback path
+        enable_gather_cache: Enable caching of all-gathered packed bytes
     """
     if test_only:
         result = test_fsdp2_setup.remote()
@@ -296,6 +389,18 @@ def main(
     elif baseline:
         returncode = run_single_gpu_baseline.remote(max_steps=max_steps)
         print(f"Baseline training completed with return code: {returncode}")
+    elif part_a:
+        returncode = run_part_a_kernel_training.remote(
+            max_steps=max_steps,
+            use_part_a=True,
+            use_torch_compile=compile,
+            disable_reacquire=disable_reacquire,
+            disable_gather=disable_gather,
+            disable_scatter=disable_scatter,
+            enable_gather_cache=enable_gather_cache,
+        )
+        compile_str = " + torch.compile" if compile else ""
+        print(f"FSDP2 + Part A kernel{compile_str} training completed with return code: {returncode}")
     else:
         returncode = run_fsdp_training.remote(max_steps=max_steps, use_fsdp2=fsdp2, use_torch_compile=compile)
         fsdp_version = "FSDP2" if fsdp2 else "FSDP1"
