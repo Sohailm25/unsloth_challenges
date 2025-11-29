@@ -629,6 +629,20 @@ def patched_dequantize_4bit(A, quant_state, absmax=None, out=None, blocksize=64,
             print(f"[BnB NONE rank={rank_dbg}] A.numel={A_tensor.numel()} qs.shape={shape_dbg} world={world_dbg}", flush=True)
         return res
 
+    # Dry-run BnB to detect None and log quant_state metadata before any Part A logic
+    dry_res = _bnb_safe_call(A, quant_state)
+    if dry_res is None:
+        qshape = tuple(quant_state.shape) if hasattr(quant_state, "shape") else None
+        has_absmax = hasattr(quant_state, "absmax")
+        has_state2 = hasattr(quant_state, "state2")
+        has_code = hasattr(quant_state, "code")
+        rank_dbg, world_dbg = _get_fsdp_rank_info()
+        print(f"[BnB DRY NONE rank={rank_dbg}] qshape={qshape} absmax={has_absmax} state2={has_state2} code={has_code} world={world_dbg}", flush=True)
+        bnb_shape = getattr(quant_state, "_bnb_ref_shape", None) or qshape or (A.numel() * 2,)
+        if isinstance(bnb_shape, int):
+            bnb_shape = (bnb_shape,)
+        return torch.zeros(bnb_shape, device=A.device, dtype=out.dtype if out is not None else torch.float16)
+
 def _run_part_a(A_tensor, qs_tensor, output_shape):
     n_packed_local = A_tensor.numel()
     shifts = _compute_shift_offsets(A_tensor, qs_tensor)
