@@ -25,6 +25,13 @@ os.environ["PYTORCH_CUDA_ALLOC_CONF"] = (
     "expandable_segments:True,"
     "roundup_power2_divisions:[32:256,64:128,256:64,>:32]"
 )
+# Safe NCCL/connection defaults for FSDP on T4
+os.environ.setdefault("CUDA_DEVICE_MAX_CONNECTIONS", "1")
+os.environ.setdefault("TORCH_NCCL_BLOCKING_WAIT", "0")
+os.environ.setdefault("NCCL_ASYNC_ERROR_HANDLING", "1")
+if torch.cuda.is_available():
+    os.environ.setdefault("ACCELERATE_USE_NCCL", "1")
+    os.environ.setdefault("TORCH_DISTRIBUTED_BACKEND", "nccl")
 
 # ============================================================================
 # Part A NF4 Kernel (from challenge_a_nf4_backup_post_asm_20251128.py)
@@ -479,41 +486,52 @@ def _set_cached_full_packed(qs, tensor):
     qs._cached_full_packed = tensor
 
 
-def _scatter_local_to_full(local_out, quant_state, A, rank, world):
-    """Scatter local dequantized rows into a full-shaped tensor (row sharding)."""
+def _scatter_local_to_full(local_out, quant_state, A, rank, world, bnb_shape=None, need_T=False):
+    """Scatter local dequantized shard into the full BnB-oriented tensor."""
     if not hasattr(quant_state, "shape") or len(quant_state.shape) != 2:
         return None
 
-    rows, cols = quant_state.shape
-    if rows % world != 0:
-        return None
-
+    q_rows, q_cols = quant_state.shape
     n_local = A.numel() * 2  # NF4 packs 2 weights per byte
-    if n_local % cols != 0:
+    if n_local % q_cols != 0:
         return None
 
-    local_rows = n_local // cols
-    if local_rows != rows // world:
+    local_q_rows = n_local // q_cols
+    if q_rows % world != 0 or local_q_rows != q_rows // world:
         return None
 
-    row_start = rank * local_rows
+    b_rows, b_cols = (
+        bnb_shape
+        if bnb_shape is not None
+        else ((q_cols, q_rows) if need_T else (q_rows, q_cols))
+    )
+    row_start = rank * local_q_rows
 
-    # Normalize local_out to shard shape
-    if local_out.dim() == 1:
-        if local_out.numel() == local_rows * cols:
-            local_out = local_out.view(local_rows, cols)
-        elif local_out.numel() == rows * cols:
-            local_out = local_out.view(rows, cols)[row_start : row_start + local_rows]
+    if need_T:
+        if local_out.dim() != 2:
+            if local_out.numel() == b_rows * local_q_rows:
+                local_out = local_out.view(b_rows, local_q_rows)
+            else:
+                return None
+        if local_out.shape != (b_rows, local_q_rows):
+            return None
+        out_full = torch.zeros((b_rows, b_cols), device=local_out.device, dtype=local_out.dtype)
+        col_start = row_start
+        out_full[:, col_start : col_start + local_q_rows] = local_out
+        return out_full
+
+    if local_out.dim() != 2:
+        if local_out.numel() == local_q_rows * b_cols:
+            local_out = local_out.view(local_q_rows, b_cols)
         else:
             return None
-    elif local_out.dim() == 2:
-        if local_out.shape == (rows, cols):
-            local_out = local_out[row_start : row_start + local_rows]
-        elif local_out.shape != (local_rows, cols):
-            return None
+    if local_out.shape == (b_rows, b_cols):
+        local_out = local_out[row_start : row_start + local_q_rows]
+    if local_out.shape != (local_q_rows, b_cols):
+        return None
 
-    out_full = torch.zeros((rows, cols), device=local_out.device, dtype=local_out.dtype)
-    out_full[row_start : row_start + local_rows] = local_out
+    out_full = torch.zeros((b_rows, b_cols), device=local_out.device, dtype=local_out.dtype)
+    out_full[row_start : row_start + local_q_rows] = local_out
     return out_full
 
 
@@ -602,34 +620,46 @@ def patched_dequantize_4bit(A, quant_state, absmax=None, out=None, blocksize=64,
     # Check for NF4 from quant_state (more reliable than function parameter)
     is_nf4 = quant_type == 'nf4' or getattr(quant_state, 'quant_type', None) == 'nf4'
 
-    def _run_part_a(A_tensor, qs_tensor, output_shape):
-        n_packed_local = A_tensor.numel()
-        shifts = _compute_shift_offsets(A_tensor, qs_tensor)
-        if shifts is None:
-            return None
+def _run_part_a(A_tensor, qs_tensor, output_shape):
+    n_packed_local = A_tensor.numel()
+    shifts = _compute_shift_offsets(A_tensor, qs_tensor)
+    if shifts is None:
+        return None
 
         offset1, offset2 = shifts
         maj, minr = torch.cuda.get_device_capability(A_tensor.device)
         use_asm = maj == 7 and minr == 5 and (n_packed_local % 4 == 0)
 
-        start = time.perf_counter()
-        result = _your_dequantize_nf4(
-            A_tensor,
-            qs_tensor,
-            offset1,
-            offset2,
-            use_custom_asm=use_asm,
-            use_cache_eviction=False,
-            out_tensor=None,
-        )
-        if output_shape is not None:
-            result = result.view(output_shape)
+    n_weights = n_packed_local * 2
+    out_dtype = A_tensor.dtype if A_tensor.dtype in (torch.float16, torch.bfloat16) else torch.float16
+    cache = getattr(qs_tensor, "_parta_out_cache", None)
+    if (
+        cache is None
+        or cache.device != A_tensor.device
+        or cache.numel() != n_weights
+        or cache.dtype != out_dtype
+    ):
+        cache = torch.empty(n_weights, device=A_tensor.device, dtype=out_dtype)
+        setattr(qs_tensor, "_parta_out_cache", cache)
 
-        elapsed = time.perf_counter() - start
-        _DEQUANT_TIMES["part_a"] += elapsed
-        _DEQUANT_TIMES["part_a_calls"] += 1
-        _DEQUANT_TIMES["count"] += 1
-        return result
+    start = time.perf_counter()
+    result = _your_dequantize_nf4(
+        A_tensor,
+        qs_tensor,
+        offset1,
+        offset2,
+        use_custom_asm=use_asm,
+        use_cache_eviction=False,
+        out_tensor=cache,
+    )
+    if output_shape is not None:
+        result = result.view(output_shape)
+
+    elapsed = time.perf_counter() - start
+    _DEQUANT_TIMES["part_a"] += elapsed
+    _DEQUANT_TIMES["part_a_calls"] += 1
+    _DEQUANT_TIMES["count"] += 1
+    return result
 
     def _ensure_bnb_shape_cached(A_tensor, qs_tensor):
         """Cache BnB output shape per quant_state for orientation validation."""
@@ -661,12 +691,26 @@ def patched_dequantize_4bit(A, quant_state, absmax=None, out=None, blocksize=64,
             rank, world_size = _get_fsdp_rank_info()
             bnb_shape = _ensure_bnb_shape_cached(A, quant_state)
             target_shape = tuple(bnb_shape) if bnb_shape is not None else full_shape
+            need_T = False
+            if bnb_shape is not None and full_shape is not None and len(full_shape) == 2:
+                need_T = (bnb_shape != full_shape) and (bnb_shape == (full_shape[1], full_shape[0]))
+            setattr(quant_state, "_bnb_ref_shape", bnb_shape)
+            setattr(quant_state, "_bnb_need_T", need_T)
+
+            def _orient(result_q):
+                if result_q is None:
+                    return None
+                res = result_q.t().contiguous() if need_T else result_q
+                if bnb_shape is not None and tuple(res.shape) != tuple(bnb_shape):
+                    res = res.view(bnb_shape)
+                return res
 
             try:
                 # Path 0: not sharded -> direct Part A
                 if not is_fsdp_sharded:
-                    qs_for_shape = _wrap_quant_state_with_shape(quant_state, target_shape)
-                    result = _run_part_a(A, qs_for_shape, target_shape)
+                    qs_for_shape = _wrap_quant_state_with_shape(quant_state, full_shape)
+                    result_q = _run_part_a(A, qs_for_shape, full_shape)
+                    result = _orient(result_q)
                     if result is not None:
                         if bnb_shape is not None and tuple(result.shape) != bnb_shape:
                             if _DEQUANT_TIMES["fallback_calls"] <= 3:
@@ -678,8 +722,9 @@ def patched_dequantize_4bit(A, quant_state, absmax=None, out=None, blocksize=64,
                 if is_fsdp_sharded and _ENABLE_REACQUIRE:
                     A_full = _reacquire_full_packed_from_module(quant_state)
                     if A_full is not None and A_full.numel() * 2 == full_elements:
-                        qs_for_shape = _wrap_quant_state_with_shape(quant_state, target_shape)
-                        result = _run_part_a(A_full, qs_for_shape, target_shape)
+                        qs_for_shape = _wrap_quant_state_with_shape(quant_state, full_shape)
+                        result_q = _run_part_a(A_full, qs_for_shape, full_shape)
+                        result = _orient(result_q)
                         if result is not None:
                             if bnb_shape is not None and tuple(result.shape) != bnb_shape:
                                 if _DEQUANT_TIMES["fallback_calls"] <= 3:
@@ -698,8 +743,9 @@ def patched_dequantize_4bit(A, quant_state, absmax=None, out=None, blocksize=64,
                         if A_full is not None and _ENABLE_GATHER_CACHE:
                             _set_cached_full_packed(quant_state, A_full)
                     if A_full is not None and A_full.numel() * 2 == full_elements:
-                        qs_for_shape = _wrap_quant_state_with_shape(quant_state, target_shape)
-                        result = _run_part_a(A_full, qs_for_shape, target_shape)
+                        qs_for_shape = _wrap_quant_state_with_shape(quant_state, full_shape)
+                        result_q = _run_part_a(A_full, qs_for_shape, full_shape)
+                        result = _orient(result_q)
                         if result is not None:
                             if bnb_shape is not None and tuple(result.shape) != bnb_shape:
                                 if _DEQUANT_TIMES["fallback_calls"] <= 3:
@@ -713,15 +759,12 @@ def patched_dequantize_4bit(A, quant_state, absmax=None, out=None, blocksize=64,
                 if is_fsdp_sharded and _ENABLE_SCATTER:
                     eff_qs = _slice_quant_state_for_fsdp(quant_state, A, rank, world_size)
                     if eff_qs is not None:
-                        shard_shape = getattr(eff_qs, "shape", None)
-                        qs_for_shape = _wrap_quant_state_with_shape(
-                            eff_qs,
-                            shard_shape if shard_shape is not None else target_shape,
-                        )
-                        local_shape = shard_shape if shard_shape is not None else None
-                        local = _run_part_a(A, qs_for_shape, local_shape)
-                        if local is not None:
-                            out_full = _scatter_local_to_full(local, quant_state, A, rank, world_size)
+                        shard_shape = tuple(getattr(eff_qs, "shape", ())) if hasattr(eff_qs, "shape") else None
+                        qs_for_shape = _wrap_quant_state_with_shape(eff_qs, shard_shape)
+                        local_q = _run_part_a(A, qs_for_shape, shard_shape)
+                        if local_q is not None:
+                            local_bnb = local_q.t().contiguous() if need_T else local_q
+                            out_full = _scatter_local_to_full(local_bnb, quant_state, A, rank, world_size, bnb_shape, need_T)
                             if out_full is not None:
                                 if bnb_shape is not None and tuple(out_full.shape) != bnb_shape:
                                     if _DEQUANT_TIMES["fallback_calls"] <= 3:
