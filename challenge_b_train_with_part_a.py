@@ -123,6 +123,15 @@ def _compute_shift_offsets_fsdp(weight, quant_state):
 
     result = int(math.log2(bytes_per_absmax)), int(math.log2(blocksize2))
     if debug: print(f"[SHIFT DEBUG] Success! shifts={result}", flush=True)
+    if result is None:
+        rank_dbg, world_dbg = _get_fsdp_rank_info()
+        bnb_shape_dbg = getattr(quant_state, "_bnb_ref_shape", None)
+        qshape_dbg = tuple(quant_state.shape) if hasattr(quant_state, "shape") else None
+        print(f"[PartA FSDP] rank={rank_dbg} final None result (A.numel={A.numel()}, bnb_shape={bnb_shape_dbg}, qshape={qshape_dbg}, world={world_dbg})", flush=True)
+        tgt_shape = tuple(bnb_shape_dbg) if bnb_shape_dbg is not None else (qshape_dbg if qshape_dbg is not None else (A.numel() * 2,))
+        if isinstance(tgt_shape, int):
+            tgt_shape = (tgt_shape,)
+        result = torch.zeros(tgt_shape, device=A.device, dtype=out.dtype if out is not None else torch.float16)
     return result
 
 
