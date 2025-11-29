@@ -1,4 +1,4 @@
-# Current State (2025-11-28)
+# Current State (2025-11-29)
 
 ## Branch Info
 - Branch: chore/split-challenges; ahead of origin
@@ -77,7 +77,7 @@
 
 ## Challenge B: FSDP2 + QLoRA Distributed Training
 
-**Status: COMPLETE (7/10 Points - Part A Integration Blocked)**
+**Status: In Progress (7/10 Points - Part A path works but slower/worse than BnB under FSDP2)**
 
 - FSDP2 + QLoRA + torch.compile working on 2x T4 GPUs
 - Kaggle notebook created and ready for upload
@@ -97,8 +97,8 @@
 
 **Files:**
 - `challenge_b_train.py` - Training script with FSDP2 + torch.compile
-- `challenge_b_train_with_part_a.py` - Training script with Part A kernel integration (blocked)
-- `modal_challenge_b.py` - Modal harness with `--fsdp2 --compile --part-a` flags
+- `challenge_b_train_with_part_a.py` - Training script with Part A kernel integration
+- `modal_challenge_b.py` - Modal harness with `--fsdp2 --compile --part-a` flags (see `runs/benchmarks/` logs)
 - `kaggle_challenge_b_fsdp2_qlora.py` - Kaggle-ready Python script
 - `notebooks/kaggle_challenge_b_fsdp2_qlora.ipynb` - Kaggle notebook
 
@@ -109,7 +109,12 @@
 | Kaggle notebook | +2 |
 | **Total** | **7** |
 
-**Part A Kernel Integration (Blocked - +3 points NOT achievable):**
+**Latest Benchmarks (2025-11-29, FSDP2 on 2x T4):**
+- BnB baseline (`modal_challenge_b.py::run_part_a_kernel_training --no-use-part-a --max-steps 5`, app `ap-jlnjfaoYpKtz28v66lagE0`): train_time=162.09s, train_loss=6.8971, steps/s=0.035.
+- Part A all-gather path (`--use-part-a --max-steps 5`, app `ap-qOac72pFSi2fTtJvjg1OWf`): train_time=266.33s, train_loss=13.95, part_a_calls=13,440, part_a_time=200.73s (BnB calls=0). Loss is far worse than BnB and runtime is slower.
+- Part A with gather cache enabled (app `ap-jXv1Vo3SxW3fwRmXRyomlq`): failed at step 0 with CUDA OOM (112MB alloc) while caching full packed bytes. Default remains cache-off.
+
+**Part A Kernel Integration Notes (+3 gap):**
 
 Implemented full integration in `challenge_b_train_with_part_a.py` with:
 - Monkey-patching of `bitsandbytes.functional.dequantize_4bit`
@@ -125,7 +130,7 @@ The Part A NF4 kernel is fundamentally incompatible with FSDP2 weight sharding:
 | `packed_bytes` | Full weight data | **Sharded** (half per GPU) |
 | Shape relationship | `packed_bytes * 2 == prod(shape)` | `packed_bytes * 2 == prod(shape) / world_size` |
 
-**Test Result (ap-o3JjC3jJgQECERo2vSw52T):**
+**Prior Test (all BnB fallbacks, ap-o3JjC3jJgQECERo2vSw52T):**
 ```
 Dequantization Statistics:
   Part A kernel calls: 0
@@ -147,17 +152,13 @@ BnB returns **full-shaped tensors** from **half the data**! FSDP2/DTensor has co
 - FSDP coordinates distributed matmul to combine valid portions correctly
 - The "garbage" portions are never used in actual computation
 
-Our kernel cannot replicate this behavior without deep FSDP2/DTensor integration.
-
-**Options to achieve +3 (NOT RECOMMENDED):**
-1. Deep FSDP2/DTensor integration to match BnB's implicit contract (weeks of work)
-2. Test on single GPU only (defeats Challenge B purpose)
+Current status: all-gather path now achieves non-zero Part A calls under FSDP2, but runtime is slower than BnB and loss quality regresses. Gather-cache optimization is not viable on 2xT4 (OOM). Closing the +3 gap likely still requires deeper FSDP2/DTensor-aware implementation or an alternative sharding strategy.
 
 ---
 
 ## Challenge C: torch.compile for QLoRA
 
-**Status: COMPLETE (All Tests Passing - 9/9 Points Achievable)**
+**Status: COMPLETE (6/9 Points - flex_attention disabled; requires document boundary masking)**
 
 - Implementation: `challenges/challenge_c_solution.py`
 - Modal harness: `modal_challenge_c.py`
@@ -169,29 +170,65 @@ Our kernel cannot replicate this behavior without deep FSDP2/DTensor integration
 |------|-----|--------|---------|
 | Graph break | T4 | PASS | Dynamic seq lengths (2, 8, 16 tokens) |
 | Training | T4 | PASS | 10/10 steps, loss=2.394, 121.1s |
-| Graph break | A100 | PASS | flex_attention + dynamic shapes (2, 8, 15 tokens) |
-| Training | A100 | PASS | flex_attention + custom_op working |
+| Graph break | A100 | PASS | SDPA + dynamic shapes |
+| Training | A100 | **PASS** | 10/10 steps, avg loss=5.077, 220.4s (ap-RNpI3j2IpLRgL7635jMJnR) |
 
-**A100 Environment (Session 11):**
-- PyTorch: 2.9.1+cu126 (upgraded from 2.5.1 for flex_attention+dynamic)
+**A100 Environment (Session 14-15 - 2025-11-29):**
+- PyTorch: 2.9.1+cu126
 - GPU: NVIDIA A100-SXM4-40GB (sm80)
-- flex_attention: AVAILABLE and WORKING
-- Modal App IDs: `ap-2GE951k0339fSvYPGYEvOr` (check), `ap-I6wChMN2QSkqtkQEodPhxv` (graph test), `ap-zLX9sIgePRcJlWpYRFj5SV` (training)
+- flex_attention: TEMPORARILY DISABLED (see investigation below)
+- Debug App ID: `ap-1UTnta6YUqh0LC7wQPYluw` (flex_attention debug test)
+- **Training App ID: `ap-RNpI3j2IpLRgL7635jMJnR`** (SDPA path - VERIFIED WORKING)
 
 **Compiled Components:**
 - LlamaMLP: `fullgraph=False, dynamic=True, max_autotune=True`
-- LlamaAttention: **flex_attention on A100** (sm80+), SDPA on T4 (sm75)
+- LlamaAttention: **SDPA on all GPUs** (flex_attention disabled)
 - LlamaRMSNorm: `fullgraph=True`
+- LlamaForCausalLM.forward: **`patch_llama_loss()` intercepts labels → compiled cross-entropy**
 - BnB Linear4bit: `custom_op` path (in-graph, no dynamo.disable)
 - PEFT LoRA: Scaling values converted to tensor buffers
 
-**flex_attention Integration (Session 11):**
-Per Oracle (gpt-5-pro) research in `oracle_flex_attention_dynamic_shapes.md`:
-- PyTorch 2.5.1/2.6.0 do NOT support flex_attention + dynamic=True + BlockMask
-- Upgraded to PyTorch 2.9.1+cu126 which reliably supports flex_attention with dynamic shapes
-- `should_enable_flex_attention()` returns True for sm80+ GPUs
-- `get_causal_block_mask()` creates proper block masks with `@torch.compiler.disable`
-- Dynamic sequence lengths verified working: 2, 8, 15 tokens all processed correctly
+**flex_attention + packing=True Investigation (Session 14-16 - ROOT CAUSE FOUND):**
+
+Initial observation: 193% loss difference between flex_attention and SDPA.
+
+**Investigation Attempts:**
+1. **Synthetic test**: flex_attention vs SDPA on raw Q,K,V tensors → **PASS** (max diff 0.002)
+2. **Full model test with packing=False**: SDPA loss=5.077 (stable)
+3. **Full model test with packing=True + flex_attention**: avg loss=10.03 (2x higher!)
+
+**Root Cause Identified:**
+The issue is **NOT** in flex_attention itself. The problem is **document cross-contamination** when using TRL's packing:
+
+- TRL's `packing=True` concatenates multiple documents into a single sequence
+- flex_attention uses a pure causal mask (`q_idx >= kv_idx`)
+- This allows tokens from different documents to attend to each other
+- TRL explicitly warns: "Packing gathers multiple samples into a single sequence, and only flash_attention_2/3 implementations are known to reliably support this"
+
+**Test Results (Session 16):**
+| Configuration | Avg Loss | Notes |
+|--------------|----------|-------|
+| SDPA + packing=False | ~5.0 | Baseline (stable) |
+| flex_attention + packing=True | ~10.0 | 2x higher - cross-contamination |
+
+**Final Fix Applied:**
+```python
+# In patch_llama_attention():
+can_use_flex = False  # Disabled - causes cross-contamination with packing
+
+# In SFTConfig:
+packing=False  # SDPA uses attention_mask for padding
+```
+Now using SDPA on all GPUs with packing=False for stable training.
+
+**To achieve +3 points (flex_attention):**
+Would require implementing proper document boundary masking in flex_attention's mask_mod function.
+This is non-trivial and not implemented.
+
+**Scoring Impact:**
+- flex_attention + dynamic sequence lengths: ~~+3 points~~ (disabled)
+- Using SDPA: +2 points for compiled attention still achieved
+- Current estimate: 6/9 points (was 9/9)
 
 **custom_op Integration (Session 10):**
 Implemented `torch.library.custom_op` pattern per Oracle (gpt-5-pro) research:
@@ -209,13 +246,24 @@ Per Oracle (gpt-5-pro) research in `oracle_peft_compile_friendly.md`:
 - Precomputes NF4 metadata for 112 Linear4bit layers
 - **Eliminated `@torch._dynamo.disable()` on PEFT wrapper!**
 
-**Scoring Assessment (9/9 points):**
+**Loss Compilation Fix (Session 12):**
+Critical finding: SFTTrainer uses its own internal loss computation, ignoring any compiled loss defined elsewhere. Fix applied:
+- `patch_llama_loss()` patches `LlamaForCausalLM.forward` to intercept labels
+- Runs original forward with `labels=None` (skip internal loss)
+- Computes loss using `compiled_cross_entropy_loss(logits, labels)`
+- Returns `CausalLMOutputWithPast` with compiled loss
+- Verified working on A100: `[Challenge C] Patched LlamaForCausalLM.forward with compiled loss`
+
+**Final Scoring Assessment (6/9 points):**
 - ✅ BnB via custom_op: avoid -2 points (no dynamo.disable)
-- ✅ Attention compiled (flex_attention on A100): +2 points
-- ✅ flex_attention + dynamic sequence lengths: +3 points
+- ✅ Attention compiled (SDPA): +2 points (flex_attention disabled)
+- ❌ flex_attention + dynamic sequence lengths: ~~+3 points~~ (requires document boundary masking)
 - ✅ MLP compiled: +1 point
-- ✅ Loss compiled: avoid -1
+- ✅ Loss compiled via patch_llama_loss(): avoid -1 point
 - ✅ LayerNorms compiled: avoid -3
+- ✅ max_autotune enabled: +2 points (verified via autotune stats in logs)
+
+**Total: 6/9 points** (missing +3 for flex_attention)
 
 ---
 

@@ -1,0 +1,10 @@
+## description of what was run, for what purpose
+BnB baseline using challenge_b_train_with_part_a.py on Modal T4x2 with FSDP2; max_steps=5; Part A disabled. Goal: compare runtime vs Part A for +3 bonus.
+Command: modal run modal_challenge_b.py::run_part_a_kernel_training --kwargs {"max_steps":5,"use_part_a":false,"use_torch_compile":false}
+
+Usage: modal run modal_challenge_b.py::run_part_a_kernel_training 
+           [OPTIONS]
+Try 'modal run modal_challenge_b.py::run_part_a_kernel_training -h' for help.
+╭─ Error ──────────────────────────────────────────────────────────────────────╮
+│ No such option: --kwargs                                                     │
+╰──────────────────────────────────────────────────────────────────────────────╯
