@@ -1,0 +1,444 @@
+## description of what was run, for what purpose
+Part A scatter-only with BnB-orientation fix + None guard (reacquire off, gather off, scatter on, cache off) using challenge_b_train_with_part_a.py on Modal 2xT4; max_steps=5.
+Command: modal run modal_challenge_b.py::run_part_a_kernel_training --use-part-a --no-use-torch-compile --max-steps 5 --disable-reacquire --disable-gather
+
+✓ Initialized. View run at 
+https://modal.com/apps/sohailm25/main/ap-XkDoCC60xvILoHiEJsDXUT
+✓ Created objects.
+├── 🔨 Created mount /Volumes/Extreme 
+│   Pro/unsloth-challenges/modal_challenge_b.py
+├── 🔨 Created mount challenge_b_train_with_part_a.py
+├── 🔨 Created mount challenge_b_train.py
+├── 🔨 Created mount /Volumes/Extreme Pro/unsloth-challenges/challenges
+├── 🔨 Created function run_fsdp_training.
+├── 🔨 Created function run_single_gpu_baseline.
+├── 🔨 Created function test_fsdp2_setup.
+└── 🔨 Created function run_part_a_kernel_training.
+============================================================
+FSDP2 + QLoRA + Part A kernel Training
+============================================================
+CUDA available: True
+GPU count: 2
+  GPU 0: Tesla T4
+  GPU 1: Tesla T4
+Part A env toggles: | reacquire=off | gather=off | scatter=on | gather_cache=off
+
+Running command: accelerate launch --config_file /tmp/fsdp_config.yaml /workspace/challenge_b_train_with_part_a.py --max_steps 5 --use_gradient_checkpointing --use_part_a_kernel
+
+PyTorch version: 2.9.1+cu128
+CUDA available: True
+CUDA device count: 2
+PyTorch version: 2.9.1+cu128
+  GPU 0: Tesla T4
+CUDA available: True  GPU 1: Tesla T4
+
+CUDA device count: 2
+  GPU 0: Tesla T4
+  GPU 1: Tesla T4
+============================================================
+Running FSDP2 + QLoRA  + Part A kernel DISTRIBUTED TRAINING
+============================================================
+============================================================
+Running FSDP2 + QLoRA  + Part A kernel DISTRIBUTED TRAINING
+============================================================
+[W1129 09:40:45.381542414 Utils.hpp:137] Warning: Environment variable NCCL_ASYNC_ERROR_HANDLING is deprecated; use TORCH_NCCL_ASYNC_ERROR_HANDLING instead (function operator())
+[W1129 09:40:45.381653808 Utils.hpp:137] Warning: Environment variable NCCL_ASYNC_ERROR_HANDLING is deprecated; use TORCH_NCCL_ASYNC_ERROR_HANDLING instead (function operator())
+[Gloo] Rank 1 is connected to 1[Gloo] Rank  peer ranks. 0Expected number of connected peer ranks is :  is connected to 11
+ peer ranks. Expected number of connected peer ranks is : 1
+World size: 2
+Local rank: 0
+Device: cuda:0
+Detected kernel version 4.4.0, which is below the recommended minimum of 5.5.0; this can cause the process to hang. It is recommended to upgrade the kernel to the minimum version or higher.
+Part A kernel ENABLED for NF4 dequantizationPart A kernel ENABLED for NF4 dequantization
+
+Loading model: meta-llama/Llama-3.1-8B-Instruct
+`torch_dtype` is deprecated! Use `dtype` instead!
+`torch_dtype` is deprecated! Use `dtype` instead!
+
+[1ALoading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]
+[1ALoading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]
+[1ALoading checkpoint shards:  25%|██▌       | 1/4 [00:05<00:15,  5.24s/it]
+[1ALoading checkpoint shards:  25%|██▌       | 1/4 [00:05<00:16,  5.48s/it]
+[1ALoading checkpoint shards:  50%|█████     | 2/4 [00:12<00:12,  6.34s/it]
+[1ALoading checkpoint shards:  50%|█████     | 2/4 [00:12<00:13,  6.54s/it]
+[1ALoading checkpoint shards:  75%|███████▌  | 3/4 [00:18<00:06,  6.46s/it]
+[1ALoading checkpoint shards:  75%|███████▌  | 3/4 [00:19<00:06,  6.51s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:19<00:00,  4.15s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:19<00:00,  4.89s/it]
+Loading checkpoint shards: 100%|██████████| 4/4 [00:19<00:00,  4.18s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:19<00:00,  4.96s/it]
+
+[1AGenerating train split: 0 examples [00:00, ? examples/s]
+[1AGenerating train split: 23073 examples [00:00, 171684.60 examples/s]
+[1AGenerating train split: 69218 examples [00:00, 249184.16 examples/s]
+[1AGenerating train split: 115176 examples [00:00, 234445.07 examples/s]
+[1AGenerating train split: 161402 examples [00:00, 230202.88 examples/s]
+[1AGenerating train split: 207518 examples [00:00, 230329.44 examples/s]Generating train split: 210289 examples [00:00, 226253.55 examples/s]
+
+[1AAdding EOS to train dataset (num_proc=4):   0%|          | 0/21029 [00:00<?, ? examples/s]
+[1AAdding EOS to train dataset (num_proc=4):   0%|          | 1/21029 [00:01<7:22:36,  1.26s/ examples]
+[1AAdding EOS to train dataset (num_proc=4):  12%|█▏        | 2611/21029 [00:01<00:07, 2559.74 examples/s]
+[1AAdding EOS to train dataset (num_proc=4):  19%|█▉        | 4000/21029 [00:01<00:04, 3662.32 examples/s]
+[1AAdding EOS to train dataset (num_proc=4):  42%|████▏     | 8877/21029 [00:01<00:01, 9881.34 examples/s]
+[1AAdding EOS to train dataset (num_proc=4):  71%|███████   | 14826/21029 [00:01<00:00, 18079.71 examples/s]
+[1AAdding EOS to train dataset (num_proc=4):  97%|█████████▋| 20403/21029 [00:01<00:00, 24861.14 examples/s]Adding EOS to train dataset (num_proc=4): 100%|██████████| 21029/21029 [00:02<00:00, 10101.87 examples/s]
+
+[1ATokenizing train dataset (num_proc=4):   0%|          | 0/21029 [00:00<?, ? examples/s]
+[1ATokenizing train dataset (num_proc=4):   0%|          | 27/21029 [00:03<44:42,  7.83 examples/s]
+[1ATokenizing train dataset (num_proc=4):   2%|▏         | 331/21029 [00:03<02:44, 126.06 examples/s]
+[1ATokenizing train dataset (num_proc=4):   3%|▎         | 597/21029 [00:03<01:18, 259.86 examples/s]
+[1ATokenizing train dataset (num_proc=4):   5%|▍         | 1001/21029 [00:03<00:38, 524.81 examples/s]
+[1ATokenizing train dataset (num_proc=4):   7%|▋         | 1426/21029 [00:03<00:22, 863.54 examples/s]
+[1ATokenizing train dataset (num_proc=4):   9%|▉         | 1896/21029 [00:04<00:14, 1296.35 examples/s]
+[1ATokenizing train dataset (num_proc=4):  12%|█▏        | 2495/21029 [00:04<00:09, 1941.49 examples/s]
+[1ATokenizing train dataset (num_proc=4):  15%|█▌        | 3188/21029 [00:04<00:06, 2768.29 examples/s]
+[1ATokenizing train dataset (num_proc=4):  19%|█▉        | 4092/21029 [00:04<00:04, 3967.73 examples/s]
+[1ATokenizing train dataset (num_proc=4):  23%|██▎       | 4872/21029 [00:04<00:03, 4783.91 examples/s]
+[1ATokenizing train dataset (num_proc=4):  27%|██▋       | 5618/21029 [00:04<00:02, 5404.60 examples/s]
+[1ATokenizing train dataset (num_proc=4):  31%|███       | 6425/21029 [00:04<00:02, 6066.43 examples/s]
+[1ATokenizing train dataset (num_proc=4):  34%|███▍      | 7156/21029 [00:04<00:02, 6388.90 examples/s]
+[1ATokenizing train dataset (num_proc=4):  38%|███▊      | 8094/21029 [00:04<00:01, 7194.34 examples/s]
+[1ATokenizing train dataset (num_proc=4):  43%|████▎     | 9022/21029 [00:04<00:01, 7666.65 examples/s]
+[1ATokenizing train dataset (num_proc=4):  47%|████▋     | 9857/21029 [00:05<00:01, 7849.70 examples/s]
+[1ATokenizing train dataset (num_proc=4):  51%|█████     | 10728/21029 [00:05<00:01, 7926.70 examples/s]
+[1ATokenizing train dataset (num_proc=4):  55%|█████▌    | 11608/21029 [00:05<00:01, 8163.55 examples/s]
+[1ATokenizing train dataset (num_proc=4):  60%|█████▉    | 12553/21029 [00:05<00:00, 8533.56 examples/s]
+[1ATokenizing train dataset (num_proc=4):  64%|██████▍   | 13521/21029 [00:05<00:00, 8530.58 examples/s]
+[1ATokenizing train dataset (num_proc=4):  69%|██████▊   | 14444/21029 [00:05<00:00, 8722.72 examples/s]
+[1ATokenizing train dataset (num_proc=4):  73%|███████▎  | 15389/21029 [00:05<00:00, 8683.24 examples/s]
+[1ATokenizing train dataset (num_proc=4):  78%|███████▊  | 16336/21029 [00:05<00:00, 8888.04 examples/s]
+[1ATokenizing train dataset (num_proc=4):  82%|████████▏ | 17293/21029 [00:05<00:00, 8782.70 examples/s]
+[1ATokenizing train dataset (num_proc=4):  87%|████████▋ | 18210/21029 [00:05<00:00, 8878.49 examples/s]
+[1ATokenizing train dataset (num_proc=4):  91%|█████████ | 19172/21029 [00:06<00:00, 7994.83 examples/s]
+[1ATokenizing train dataset (num_proc=4):  95%|█████████▌| 20006/21029 [00:06<00:00, 6495.00 examples/s]
+[1ATokenizing train dataset (num_proc=4):  99%|█████████▉| 20772/21029 [00:06<00:00, 5370.19 examples/s]Tokenizing train dataset (num_proc=4): 100%|██████████| 21029/21029 [00:06<00:00, 3115.73 examples/s]
+
+[1ATruncating train dataset (num_proc=4):   0%|          | 0/21029 [00:00<?, ? examples/s]
+[1ATruncating train dataset (num_proc=4):   5%|▍         | 1000/21029 [00:00<00:12, 1553.06 examples/s]Truncating train dataset (num_proc=4): 100%|██████████| 21029/21029 [00:00<00:00, 26803.54 examples/s]
+Detected kernel version 4.4.0, which is below the recommended minimum of 5.5.0; this can cause the process to hang. It is recommended to upgrade the kernel to the minimum version or higher.
+Trainable params: 167,772,160 (5.66%)
+Starting FSDP2 training...
+The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'eos_token_id': 128009, 'pad_token_id': 128009}.
+The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'eos_token_id': 128009, 'pad_token_id': 128009}.
+/usr/local/lib/python3.11/site-packages/accelerate/utils/fsdp_utils.py:715: UserWarning: FSDP upcast of low precision parameters to fp32 (since mixed_precision != 'no') may affect the precision of model checkpoints.
+  warnings.warn(
+
+[1A  0%|          | 0/5 [00:00<?, ?it/s]/usr/local/lib/python3.11/site-packages/torch/_dynamo/eval_frame.py:1044: UserWarning: torch.utils.checkpoint: the use_reentrant parameter should be passed explicitly. Starting in PyTorch 2.9, calling checkpoint without use_reentrant will raise an exception. use_reentrant=False is recommended, but if you need to preserve the current default behavior, you can pass use_reentrant=True. Refer to docs for more details on the differences between the two variants.
+  return fn(*args, **kwargs)
+/usr/local/lib/python3.11/site-packages/torch/_dynamo/eval_frame.py:1044: UserWarning: torch.utils.checkpoint: the use_reentrant parameter should be passed explicitly. Starting in PyTorch 2.9, calling checkpoint without use_reentrant will raise an exception. use_reentrant=False is recommended, but if you need to preserve the current default behavior, you can pass use_reentrant=True. Refer to docs for more details on the differences between the two variants.
+  return fn(*args, **kwargs)
+[rank0]: Traceback (most recent call last):
+[rank0]:   File "/workspace/challenge_b_train_with_part_a.py", line 1074, in <module>
+[rank0]:     main()
+[rank0]:   File "/workspace/challenge_b_train_with_part_a.py", line 1070, in main
+[rank0]:     run_fsdp2_training(args)
+[rank0]:   File "/workspace/challenge_b_train_with_part_a.py", line 986, in run_fsdp2_training
+[rank0]:     train_result = trainer.train()
+[rank0]:                    ^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.11/site-packages/transformers/trainer.py", line 2325, in train
+[rank0]:     return inner_training_loop(
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.11/site-packages/transformers/trainer.py", line 2674, in _inner_training_loop
+[rank0]:     tr_loss_step = self.training_step(model, inputs, num_items_in_batch)
+[rank0]:                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.11/site-packages/trl/trainer/sft_trainer.py", line 1190, in training_step
+[rank0]:     return super().training_step(*args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.11/site-packages/transformers/trainer.py", line 4020, in training_step
+[rank0]:     loss = self.compute_loss(model, inputs, num_items_in_batch=num_items_in_batch)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.11/site-packages/trl/trainer/sft_trainer.py", line 1103, in compute_loss
+[rank0]:     (loss, outputs) = super().compute_loss(
+[rank0]:                       ^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.11/site-packages/transformers/trainer.py", line 4110, in compute_loss
+[rank0]:     outputs = model(**inputs)
+[rank0]:               ^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1775, in _wrapped_call_impl
+[rank0]:     return self._call_impl(*args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1881, in _call_impl
+[rank0]:     return inner()
+[rank0]:            ^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1829, in inner
+[rank0]:     result = forward_call(*args, **kwargs)
+[rank0]:              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.11/site-packages/peft/peft_model.py", line 1923, in forward
+[rank0]:     return self.base_model(
+[rank0]:            ^^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1775, in _wrapped_call_impl
+[rank0]:     return self._call_impl(*args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1786, in _call_impl
+[rank0]:     return forward_call(*args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.11/site-packages/peft/tuners/tuners_utils.py", line 308, in forward
+[rank0]:     return self.model.forward(*args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.11/site-packages/transformers/utils/generic.py", line 918, in wrapper
+[rank0]:     output = func(self, *args, **kwargs)
+[rank0]:              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.11/site-packages/transformers/models/llama/modeling_llama.py", line 459, in forward
+[rank0]:     outputs: BaseModelOutputWithPast = self.model(
+[rank0]:                                        ^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1775, in _wrapped_call_impl
+[rank0]:     return self._call_impl(*args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1786, in _call_impl
+[rank0]:     return forward_call(*args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.11/site-packages/transformers/utils/generic.py", line 1072, in wrapper
+[rank0]:     outputs = func(self, *args, **kwargs)
+[rank0]:               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.11/site-packages/transformers/models/llama/modeling_llama.py", line 395, in forward
+[rank0]:     hidden_states = decoder_layer(
+[rank0]:                     ^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.11/site-packages/transformers/modeling_layers.py", line 93, in __call__
+[rank0]:     return self._gradient_checkpointing_func(partial(super().__call__, **kwargs), *args)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.11/site-packages/torch/_compile.py", line 53, in inner
+[rank0]:     return disable_fn(*args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.11/site-packages/torch/_dynamo/eval_frame.py", line 1044, in _fn
+[rank0]:     return fn(*args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.11/site-packages/torch/utils/checkpoint.py", line 496, in checkpoint
+[rank0]:     return CheckpointFunction.apply(function, preserve, *args)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.11/site-packages/torch/autograd/function.py", line 581, in apply
+[rank0]:     return super().apply(*args, **kwargs)  # type: ignore[misc]
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.11/site-packages/torch/utils/checkpoint.py", line 262, in forward
+[rank0]:     outputs = run_function(*args)
+[rank0]:               ^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1775, in _wrapped_call_impl
+[rank0]:     return self._call_impl(*args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1881, in _call_impl
+[rank0]:     return inner()
+[rank0]:            ^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1829, in inner
+[rank0]:     result = forward_call(*args, **kwargs)
+[rank0]:              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.11/site-packages/transformers/utils/deprecation.py", line 172, in wrapped_func
+[rank0]:     return func(*args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.11/site-packages/transformers/models/llama/modeling_llama.py", line 294, in forward
+[rank0]:     hidden_states, _ = self.self_attn(
+[rank0]:                        ^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1775, in _wrapped_call_impl
+[rank0]:     return self._call_impl(*args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1786, in _call_impl
+[rank0]:     return forward_call(*args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.11/site-packages/transformers/utils/deprecation.py", line 172, in wrapped_func
+[rank0]:     return func(*args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.11/site-packages/transformers/models/llama/modeling_llama.py", line 236, in forward
+[rank0]:     query_states = self.q_proj(hidden_states).view(hidden_shape).transpose(1, 2)
+[rank0]:                    ^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1775, in _wrapped_call_impl
+[rank0]:     return self._call_impl(*args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1786, in _call_impl
+[rank0]:     return forward_call(*args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.11/site-packages/peft/tuners/lora/bnb.py", line 547, in forward
+[rank0]:     result = self.base_layer(x, *args, **kwargs)
+[rank0]:              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1775, in _wrapped_call_impl
+[rank0]:     return self._call_impl(*args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1786, in _call_impl
+[rank0]:     return forward_call(*args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.11/site-packages/bitsandbytes/nn/modules.py", line 532, in forward
+[rank0]:     return bnb.matmul_4bit(x, weight, bias=bias, quant_state=self.weight.quant_state).to(inp_dtype)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.11/site-packages/bitsandbytes/autograd/_functions.py", line 448, in matmul_4bit
+[rank0]:     return MatMul4Bit.apply(A, B, out, bias, quant_state)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.11/site-packages/torch/autograd/function.py", line 581, in apply
+[rank0]:     return super().apply(*args, **kwargs)  # type: ignore[misc]
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.11/site-packages/bitsandbytes/autograd/_functions.py", line 373, in forward
+[rank0]:     output = torch.nn.functional.linear(A, F.dequantize_4bit(B, quant_state).to(A.dtype).t(), bias)
+[rank0]:                                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]: AttributeError: 'NoneType' object has no attribute 'to'
+[rank1]: Traceback (most recent call last):
+[rank1]:   File "/workspace/challenge_b_train_with_part_a.py", line 1074, in <module>
+[rank1]:     main()
+[rank1]:   File "/workspace/challenge_b_train_with_part_a.py", line 1070, in main
+[rank1]:     run_fsdp2_training(args)
+[rank1]:   File "/workspace/challenge_b_train_with_part_a.py", line 986, in run_fsdp2_training
+[rank1]:     train_result = trainer.train()
+[rank1]:                    ^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.11/site-packages/transformers/trainer.py", line 2325, in train
+[rank1]:     return inner_training_loop(
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.11/site-packages/transformers/trainer.py", line 2674, in _inner_training_loop
+[rank1]:     tr_loss_step = self.training_step(model, inputs, num_items_in_batch)
+[rank1]:                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.11/site-packages/trl/trainer/sft_trainer.py", line 1190, in training_step
+[rank1]:     return super().training_step(*args, **kwargs)
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.11/site-packages/transformers/trainer.py", line 4020, in training_step
+[rank1]:     loss = self.compute_loss(model, inputs, num_items_in_batch=num_items_in_batch)
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.11/site-packages/trl/trainer/sft_trainer.py", line 1103, in compute_loss
+[rank1]:     (loss, outputs) = super().compute_loss(
+[rank1]:                       ^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.11/site-packages/transformers/trainer.py", line 4110, in compute_loss
+[rank1]:     outputs = model(**inputs)
+[rank1]:               ^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1775, in _wrapped_call_impl
+[rank1]:     return self._call_impl(*args, **kwargs)
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1881, in _call_impl
+[rank1]:     return inner()
+[rank1]:            ^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1829, in inner
+[rank1]:     result = forward_call(*args, **kwargs)
+[rank1]:              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.11/site-packages/peft/peft_model.py", line 1923, in forward
+[rank1]:     return self.base_model(
+[rank1]:            ^^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1775, in _wrapped_call_impl
+[rank1]:     return self._call_impl(*args, **kwargs)
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1786, in _call_impl
+[rank1]:     return forward_call(*args, **kwargs)
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.11/site-packages/peft/tuners/tuners_utils.py", line 308, in forward
+[rank1]:     return self.model.forward(*args, **kwargs)
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.11/site-packages/transformers/utils/generic.py", line 918, in wrapper
+[rank1]:     output = func(self, *args, **kwargs)
+[rank1]:              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.11/site-packages/transformers/models/llama/modeling_llama.py", line 459, in forward
+[rank1]:     outputs: BaseModelOutputWithPast = self.model(
+[rank1]:                                        ^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1775, in _wrapped_call_impl
+[rank1]:     return self._call_impl(*args, **kwargs)
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1786, in _call_impl
+[rank1]:     return forward_call(*args, **kwargs)
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.11/site-packages/transformers/utils/generic.py", line 1072, in wrapper
+[rank1]:     outputs = func(self, *args, **kwargs)
+[rank1]:               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.11/site-packages/transformers/models/llama/modeling_llama.py", line 395, in forward
+[rank1]:     hidden_states = decoder_layer(
+[rank1]:                     ^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.11/site-packages/transformers/modeling_layers.py", line 93, in __call__
+[rank1]:     return self._gradient_checkpointing_func(partial(super().__call__, **kwargs), *args)
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.11/site-packages/torch/_compile.py", line 53, in inner
+[rank1]:     return disable_fn(*args, **kwargs)
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.11/site-packages/torch/_dynamo/eval_frame.py", line 1044, in _fn
+[rank1]:     return fn(*args, **kwargs)
+[rank1]:            ^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.11/site-packages/torch/utils/checkpoint.py", line 496, in checkpoint
+[rank1]:     return CheckpointFunction.apply(function, preserve, *args)
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.11/site-packages/torch/autograd/function.py", line 581, in apply
+[rank1]:     return super().apply(*args, **kwargs)  # type: ignore[misc]
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.11/site-packages/torch/utils/checkpoint.py", line 262, in forward
+[rank1]:     outputs = run_function(*args)
+[rank1]:               ^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1775, in _wrapped_call_impl
+[rank1]:     return self._call_impl(*args, **kwargs)
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1881, in _call_impl
+[rank1]:     return inner()
+[rank1]:            ^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1829, in inner
+[rank1]:     result = forward_call(*args, **kwargs)
+[rank1]:              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.11/site-packages/transformers/utils/deprecation.py", line 172, in wrapped_func
+[rank1]:     return func(*args, **kwargs)
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.11/site-packages/transformers/models/llama/modeling_llama.py", line 294, in forward
+[rank1]:     hidden_states, _ = self.self_attn(
+[rank1]:                        ^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1775, in _wrapped_call_impl
+[rank1]:     return self._call_impl(*args, **kwargs)
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1786, in _call_impl
+[rank1]:     return forward_call(*args, **kwargs)
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.11/site-packages/transformers/utils/deprecation.py", line 172, in wrapped_func
+[rank1]:     return func(*args, **kwargs)
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.11/site-packages/transformers/models/llama/modeling_llama.py", line 236, in forward
+[rank1]:     query_states = self.q_proj(hidden_states).view(hidden_shape).transpose(1, 2)
+[rank1]:                    ^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1775, in _wrapped_call_impl
+[rank1]:     return self._call_impl(*args, **kwargs)
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1786, in _call_impl
+[rank1]:     return forward_call(*args, **kwargs)
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.11/site-packages/peft/tuners/lora/bnb.py", line 547, in forward
+[rank1]:     result = self.base_layer(x, *args, **kwargs)
+[rank1]:              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1775, in _wrapped_call_impl
+[rank1]:     return self._call_impl(*args, **kwargs)
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1786, in _call_impl
+[rank1]:     return forward_call(*args, **kwargs)
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.11/site-packages/bitsandbytes/nn/modules.py", line 532, in forward
+[rank1]:     return bnb.matmul_4bit(x, weight, bias=bias, quant_state=self.weight.quant_state).to(inp_dtype)
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.11/site-packages/bitsandbytes/autograd/_functions.py", line 448, in matmul_4bit
+[rank1]:     return MatMul4Bit.apply(A, B, out, bias, quant_state)
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.11/site-packages/torch/autograd/function.py", line 581, in apply
+[rank1]:     return super().apply(*args, **kwargs)  # type: ignore[misc]
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.11/site-packages/bitsandbytes/autograd/_functions.py", line 373, in forward
+[rank1]:     output = torch.nn.functional.linear(A, F.dequantize_4bit(B, quant_state).to(A.dtype).t(), bias)
+[rank1]:                                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]: AttributeError: 'NoneType' object has no attribute 'to'
+  0%|          | 0/5 [00:02<?, ?it/s]
+[rank0]:[W1129 09:43:07.308772063 ProcessGroupNCCL.cpp:1524] Warning: WARNING: destroy_process_group() was not called before program exit, which can leak resources. For more info, please see https://pytorch.org/docs/stable/distributed.html#shutdown (function operator())
+[rank1]:[W1129 09:43:08.109333572 AllocatorConfig.cpp:28] Warning: PYTORCH_CUDA_ALLOC_CONF is deprecated, use PYTORCH_ALLOC_CONF instead (function operator())
+[rank0]:[W1129 09:43:08.451120252 AllocatorConfig.cpp:28] Warning: PYTORCH_CUDA_ALLOC_CONF is deprecated, use PYTORCH_ALLOC_CONF instead (function operator())
+W1129 09:43:10.478000 6 site-packages/torch/distributed/elastic/multiprocessing/api.py:908] Sending process 12 closing signal SIGTERM
+E1129 09:43:11.103000 6 site-packages/torch/distributed/elastic/multiprocessing/api.py:882] failed (exitcode: 1) local_rank: 1 (pid: 13) of binary: /usr/local/bin/python
+Traceback (most recent call last):
+  File "/usr/local/bin/accelerate", line 7, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/accelerate/commands/accelerate_cli.py", line 50, in main
+    args.func(args)
+  File "/usr/local/lib/python3.11/site-packages/accelerate/commands/launch.py", line 1268, in launch_command
+    multi_gpu_launcher(args)
+  File "/usr/local/lib/python3.11/site-packages/accelerate/commands/launch.py", line 899, in multi_gpu_launcher
+    distrib_run.run(args)
+  File "/usr/local/lib/python3.11/site-packages/torch/distributed/run.py", line 927, in run
+    elastic_launch(
+  File "/usr/local/lib/python3.11/site-packages/torch/distributed/launcher/api.py", line 156, in __call__
+    return launch_agent(self._config, self._entrypoint, list(args))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/torch/distributed/launcher/api.py", line 293, in launch_agent
+    raise ChildFailedError(
+torch.distributed.elastic.multiprocessing.errors.ChildFailedError: 
+============================================================
+/workspace/challenge_b_train_with_part_a.py FAILED
+------------------------------------------------------------
+Failures:
+  <NO_OTHER_FAILURES>
+------------------------------------------------------------
+Root Cause (first observed failure):
+[0]:
+  time      : 2025-11-29_09:43:10
+  host      : localhost
+  rank      : 1 (local_rank: 1)
+  exitcode  : 1 (pid: 13)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+============================================================
+Stopping app - local entrypoint completed.
+✓ App completed. View run at 
+https://modal.com/apps/sohailm25/main/ap-XkDoCC60xvILoHiEJsDXUT
