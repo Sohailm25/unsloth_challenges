@@ -758,44 +758,78 @@ def test_gradient_correctness():
 
 
 def test_other_functions():
-    """Test with label-smoothed CE."""
+    """Test label-smoothed CE with ground truth comparison."""
     torch.manual_seed(42)
     device = "cpu"
 
     B, T, H, V = 2, 16, 64, 100
+    epsilon = 0.1
 
     X = torch.randn(B, T, H, device=device, requires_grad=True)
     linear = nn.Linear(H, V, device=device)
     labels = torch.randint(0, V, (B, T), device=device)
 
-    extras = {"labels": labels, "epsilon": torch.tensor(0.1)}
+    # ============ Standard label-smoothed CE ============
+    X_std = X.detach().clone().requires_grad_(True)
+    linear_std = nn.Linear(H, V, device=device)
+    with torch.no_grad():
+        linear_std.weight.copy_(linear.weight)
+        linear_std.bias.copy_(linear.bias)
+
+    logits_std = linear_std(X_std.view(-1, H))  # [N, V]
+    # Standard label smoothing
+    log_probs = F.log_softmax(logits_std, dim=-1)
+    n_classes = logits_std.size(-1)
+    labels_flat = labels.view(-1)
+    # One-hot with smoothing
+    smooth_labels = torch.full_like(log_probs, epsilon / n_classes)
+    smooth_labels.scatter_(1, labels_flat.unsqueeze(1), 1.0 - epsilon + epsilon / n_classes)
+    loss_std = -(smooth_labels * log_probs).sum(dim=-1).mean()
+    loss_std.backward()
+
+    # ============ Memory-efficient label-smoothed CE ============
+    X_eff = X.detach().clone().requires_grad_(True)
+    linear_eff = nn.Linear(H, V, device=device)
+    with torch.no_grad():
+        linear_eff.weight.copy_(linear.weight)
+        linear_eff.bias.copy_(linear.bias)
+
+    extras = {"labels": labels, "epsilon": torch.tensor(epsilon)}
 
     def _transform(batch, linear_fn, labels, epsilon):
         return label_smoothed_ce_transform_unreduced(
             batch, linear_fn, labels, epsilon=epsilon.item()
         )
 
-    loss = memory_efficient_linear_apply(
-        X, linear, _transform,
+    loss_eff = memory_efficient_linear_apply(
+        X_eff, linear_eff, _transform,
         reduction="mean",
         chunk_size=16,
         extras=extras,
     )
-    loss.backward()
+    loss_eff.backward()
 
-    print(f"Label-smoothed CE loss: {loss.item():.6f}")
-    print(f"X grad norm: {X.grad.norm().item():.6f}")
-    print(f"W grad norm: {linear.weight.grad.norm().item():.6f}")
+    # ============ Compare ============
+    loss_match = torch.allclose(loss_std, loss_eff, rtol=1e-4, atol=1e-4)
+    x_grad_match = torch.allclose(X_std.grad, X_eff.grad, rtol=1e-3, atol=1e-3)
+    w_grad_match = torch.allclose(linear_std.weight.grad, linear_eff.weight.grad, rtol=1e-3, atol=1e-3)
 
-    return True
+    print(f"Standard loss: {loss_std.item():.6f}")
+    print(f"Efficient loss: {loss_eff.item():.6f}")
+    print(f"Loss close: {loss_match}")
+    print(f"X grad close: {x_grad_match}")
+    print(f"W grad close: {w_grad_match}")
+
+    return loss_match and x_grad_match and w_grad_match
 
 
 def test_grpo():
-    """Test GRPO loss."""
+    """Test GRPO loss with ground truth comparison."""
     torch.manual_seed(42)
     device = "cpu"
 
     B, T, H, V = 4, 32, 64, 1000
+    clip_eps = 0.2
 
     X = torch.randn(B, T, H, device=device, requires_grad=True)
     linear = nn.Linear(H, V, device=device)
@@ -805,15 +839,55 @@ def test_grpo():
     mask = torch.ones(B, T, device=device)
     mask[:, -4:] = 0  # Mask out last 4 tokens
 
-    grpo_loss = MemoryEfficientGRPOLoss(chunk_size=32, clip_eps=0.2)
-    loss = grpo_loss(X, linear, actions, advantages, mask=mask, ref_logprobs=ref_logprobs)
-    loss.backward()
+    # ============ Standard GRPO computation ============
+    X_std = X.detach().clone().requires_grad_(True)
+    linear_std = nn.Linear(H, V, device=device)
+    with torch.no_grad():
+        linear_std.weight.copy_(linear.weight)
+        linear_std.bias.copy_(linear.bias)
 
-    print(f"GRPO loss: {loss.item():.6f}")
-    print(f"X grad norm: {X.grad.norm().item():.6f}")
-    print(f"W grad norm: {linear.weight.grad.norm().item():.6f}")
+    # Full logits computation
+    logits_std = linear_std(X_std.view(-1, H))  # [N, V]
+    log_probs_std = F.log_softmax(logits_std, dim=-1)
 
-    return True
+    # Get current policy log probs
+    actions_flat = actions.view(-1)
+    current_lp_std = log_probs_std.gather(dim=-1, index=actions_flat.unsqueeze(1)).squeeze(-1)  # [N]
+    current_lp_std = current_lp_std.view(B, T)
+
+    # Compute ratio and clipped surrogate
+    ratio_std = (current_lp_std - ref_logprobs).exp()
+    surr1_std = ratio_std * advantages
+    surr2_std = ratio_std.clamp(1 - clip_eps, 1 + clip_eps) * advantages
+    policy_loss_std = -torch.min(surr1_std, surr2_std)
+
+    # Apply mask and take mean
+    loss_std = (policy_loss_std * mask).sum() / mask.sum()
+    loss_std.backward()
+
+    # ============ Memory-efficient GRPO computation ============
+    X_eff = X.detach().clone().requires_grad_(True)
+    linear_eff = nn.Linear(H, V, device=device)
+    with torch.no_grad():
+        linear_eff.weight.copy_(linear.weight)
+        linear_eff.bias.copy_(linear.bias)
+
+    grpo_loss = MemoryEfficientGRPOLoss(chunk_size=32, clip_eps=clip_eps)
+    loss_eff = grpo_loss(X_eff, linear_eff, actions, advantages, mask=mask, ref_logprobs=ref_logprobs)
+    loss_eff.backward()
+
+    # ============ Compare ============
+    loss_match = torch.allclose(loss_std, loss_eff, rtol=1e-4, atol=1e-4)
+    x_grad_match = torch.allclose(X_std.grad, X_eff.grad, rtol=1e-3, atol=1e-3)
+    w_grad_match = torch.allclose(linear_std.weight.grad, linear_eff.weight.grad, rtol=1e-3, atol=1e-3)
+
+    print(f"Standard GRPO loss: {loss_std.item():.6f}")
+    print(f"Efficient GRPO loss: {loss_eff.item():.6f}")
+    print(f"Loss close: {loss_match}")
+    print(f"X grad close: {x_grad_match}")
+    print(f"W grad close: {w_grad_match}")
+
+    return loss_match and x_grad_match and w_grad_match
 
 
 def test_memory_reduction():

@@ -264,14 +264,15 @@ def test_memory_reduction():
     image=image,
 )
 def test_grpo_memory():
-    """Test GRPO loss memory efficiency."""
+    """Test GRPO loss with ground truth validation."""
     import torch
     import torch.nn as nn
+    import torch.nn.functional as F
     import gc
     import sys
 
     print("=" * 70)
-    print("Challenge E: GRPO Memory Test")
+    print("Challenge E: GRPO Ground Truth Validation")
     print("=" * 70)
 
     device = "cuda"
@@ -279,50 +280,124 @@ def test_grpo_memory():
     sys.path.insert(0, "/workspace")
     from challenges.challenge_e_solution import MemoryEfficientGRPOLoss
 
-    B, T, H, V = 2, 512, 2048, 32000
-    chunk_size = 256
+    # Smaller config for gradient validation (to fit in memory with standard approach)
+    B, T, H, V = 2, 256, 1024, 32000
+    chunk_size = 128
+    clip_eps = 0.2
 
     print(f"\nConfig: B={B}, T={T}, H={H}, V={V}")
     print(f"Theoretical logits: {B*T*V*2/1024**3:.3f} GB")
 
+    torch.manual_seed(42)
     X = torch.randn(B, T, H, device=device, dtype=torch.bfloat16, requires_grad=True)
     linear = nn.Linear(H, V, device=device, dtype=torch.bfloat16)
     actions = torch.randint(0, V, (B, T), device=device)
     advantages = torch.randn(B, T, device=device, dtype=torch.bfloat16)
     ref_logprobs = torch.randn(B, T, device=device, dtype=torch.bfloat16) * 0.1 - 5.0
     mask = torch.ones(B, T, device=device, dtype=torch.bfloat16)
-    mask[:, -64:] = 0
+    mask[:, -32:] = 0
 
+    # ============ Standard GRPO computation ============
+    print("\n--- Standard GRPO ---")
+    torch.cuda.reset_peak_memory_stats()
+    gc.collect()
+    torch.cuda.empty_cache()
+
+    X_std = X.detach().clone().requires_grad_(True)
+    linear_std = nn.Linear(H, V, device=device, dtype=torch.bfloat16)
+    with torch.no_grad():
+        linear_std.weight.copy_(linear.weight)
+        linear_std.bias.copy_(linear.bias)
+
+    # Full logits computation
+    logits_std = linear_std(X_std.view(-1, H))  # [N, V]
+    log_probs_std = F.log_softmax(logits_std.float(), dim=-1).to(torch.bfloat16)
+
+    # Get current policy log probs
+    actions_flat = actions.view(-1)
+    current_lp_std = log_probs_std.gather(dim=-1, index=actions_flat.unsqueeze(1)).squeeze(-1)  # [N]
+    current_lp_std = current_lp_std.view(B, T)
+
+    # Compute ratio and clipped surrogate
+    ratio_std = (current_lp_std - ref_logprobs).exp()
+    surr1_std = ratio_std * advantages
+    surr2_std = ratio_std.clamp(1 - clip_eps, 1 + clip_eps) * advantages
+    policy_loss_std = -torch.min(surr1_std, surr2_std)
+
+    # Apply mask and take mean
+    loss_std = (policy_loss_std * mask).sum() / mask.sum()
+    loss_std_val = loss_std.item()
+    print(f"Standard loss: {loss_std_val:.6f}")
+    loss_std.backward()
+
+    peak_std = torch.cuda.max_memory_allocated() / (1024**3)
+    print(f"Standard peak memory: {peak_std:.3f} GB")
+
+    grad_X_std = X_std.grad.clone()
+    grad_W_std = linear_std.weight.grad.clone()
+
+    del X_std, logits_std, log_probs_std, loss_std, linear_std
+    gc.collect()
+    torch.cuda.empty_cache()
+
+    # ============ Memory-efficient GRPO ============
+    print("\n--- Efficient GRPO ---")
     torch.cuda.reset_peak_memory_stats()
 
-    grpo_loss = MemoryEfficientGRPOLoss(chunk_size=chunk_size, clip_eps=0.2)
-    loss = grpo_loss(X, linear, actions, advantages, mask=mask, ref_logprobs=ref_logprobs)
-    loss.backward()
+    X_eff = X.detach().clone().requires_grad_(True)
+    linear_eff = nn.Linear(H, V, device=device, dtype=torch.bfloat16)
+    with torch.no_grad():
+        linear_eff.weight.copy_(linear.weight)
+        linear_eff.bias.copy_(linear.bias)
 
-    peak_mem = torch.cuda.max_memory_allocated() / (1024**3)
+    grpo_loss = MemoryEfficientGRPOLoss(chunk_size=chunk_size, clip_eps=clip_eps)
+    loss_eff = grpo_loss(X_eff, linear_eff, actions, advantages, mask=mask, ref_logprobs=ref_logprobs)
+    loss_eff_val = loss_eff.item()
+    print(f"Efficient loss: {loss_eff_val:.6f}")
+    loss_eff.backward()
 
-    print(f"\nGRPO Results:")
-    print(f"  Loss: {loss.item():.6f}")
-    print(f"  Peak memory: {peak_mem:.3f} GB")
-    print(f"  X grad norm: {X.grad.norm().item():.6f}")
-    print(f"  W grad norm: {linear.weight.grad.norm().item():.6f}")
-    print(f"  GRPO test: PASS")
+    peak_eff = torch.cuda.max_memory_allocated() / (1024**3)
+    print(f"Efficient peak memory: {peak_eff:.3f} GB")
+
+    # ============ Compare ============
+    print("\n--- Comparison ---")
+    loss_diff = abs(loss_std_val - loss_eff_val)
+    loss_match = loss_diff < 0.01 * abs(loss_std_val)  # Within 1%
+    x_grad_match = torch.allclose(grad_X_std, X_eff.grad, rtol=1e-2, atol=1e-2)
+    w_grad_match = torch.allclose(grad_W_std, linear_eff.weight.grad, rtol=1e-2, atol=1e-2)
+
+    memory_reduction = (1 - peak_eff / peak_std) * 100 if peak_std > 0 else 0
+
+    print(f"Loss difference: {loss_diff:.6f}")
+    print(f"Loss match (within 1%): {loss_match}")
+    print(f"X grad match: {x_grad_match}")
+    print(f"W grad match: {w_grad_match}")
+    print(f"Memory reduction: {memory_reduction:.1f}%")
+
+    passed = loss_match and x_grad_match and w_grad_match
+    print(f"\nGRPO ground truth test: {'PASS' if passed else 'FAIL'}")
 
     return {
-        "loss": loss.item(),
-        "peak_mem": peak_mem,
-        "passed": True,
+        "loss_std": loss_std_val,
+        "loss_eff": loss_eff_val,
+        "loss_match": loss_match,
+        "x_grad_match": x_grad_match,
+        "w_grad_match": w_grad_match,
+        "peak_std": peak_std,
+        "peak_eff": peak_eff,
+        "memory_reduction": memory_reduction,
+        "passed": passed,
     }
 
 
 @app.function(
-    gpu="T4",
-    timeout=1200,  # 20 min for model loading
+    gpu="A100",  # 8B model needs A100
+    timeout=1800,  # 30 min for model loading
     image=llama_image,
     secrets=[modal.Secret.from_dict({"HF_TOKEN": "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"})],
 )
 def test_llama_loss_match():
-    """Test that training loss matches with Llama 1B model."""
+    """Test that training loss matches with Llama model."""
     import torch
     import torch.nn.functional as F
     import gc
@@ -330,7 +405,7 @@ def test_llama_loss_match():
     import os
 
     print("=" * 70)
-    print("Challenge E: Llama 1B Training Loss Match Test")
+    print("Challenge E: Llama Training Loss Match Test")
     print("=" * 70)
 
     device = "cuda"
@@ -341,6 +416,7 @@ def test_llama_loss_match():
     hf_token = os.environ.get("HF_TOKEN")
     if hf_token:
         os.environ["HUGGING_FACE_HUB_TOKEN"] = hf_token
+        os.environ["HF_TOKEN"] = hf_token
 
     # Import transformers
     from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -349,9 +425,9 @@ def test_llama_loss_match():
     sys.path.insert(0, "/workspace")
     from challenges.challenge_e_solution import MemoryEfficientCrossEntropyLoss
 
-    # Load a small Llama model (1B or smaller)
+    # Try Llama-3.1-8B first (user has access)
     print("\nLoading Llama model...")
-    model_name = "meta-llama/Llama-3.2-1B"
+    model_name = "meta-llama/Llama-3.1-8B"
 
     try:
         tokenizer = AutoTokenizer.from_pretrained(model_name, token=hf_token)
@@ -363,14 +439,26 @@ def test_llama_loss_match():
         )
     except Exception as e:
         print(f"Could not load {model_name}: {e}")
-        print("Trying TinyLlama as fallback...")
-        model_name = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
-        tokenizer = AutoTokenizer.from_pretrained(model_name)
-        model = AutoModelForCausalLM.from_pretrained(
-            model_name,
-            torch_dtype=torch.bfloat16,
-            device_map="cuda",
-        )
+        print("Trying Llama-3.2-1B as fallback...")
+        model_name = "meta-llama/Llama-3.2-1B"
+        try:
+            tokenizer = AutoTokenizer.from_pretrained(model_name, token=hf_token)
+            model = AutoModelForCausalLM.from_pretrained(
+                model_name,
+                torch_dtype=torch.bfloat16,
+                device_map="cuda",
+                token=hf_token,
+            )
+        except Exception as e2:
+            print(f"Could not load {model_name}: {e2}")
+            print("Trying TinyLlama as final fallback...")
+            model_name = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
+            tokenizer = AutoTokenizer.from_pretrained(model_name)
+            model = AutoModelForCausalLM.from_pretrained(
+                model_name,
+                torch_dtype=torch.bfloat16,
+                device_map="cuda",
+            )
 
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
