@@ -1,5 +1,8 @@
 # Current State (2025-11-29)
 
+## Today
+- Reviewed repository layout to identify final submission files for each challenge; no code changes performed.
+
 ## Branch Info
 - Branch: chore/split-challenges; ahead of origin
 - bd issue `unsloth-challenges-guu` closed after custom asm implementation (Challenge A)
