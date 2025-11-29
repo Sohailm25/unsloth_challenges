@@ -77,7 +77,7 @@
 
 ## Challenge B: FSDP2 + QLoRA Distributed Training
 
-**Status: COMPLETE (7/10 Points)**
+**Status: COMPLETE (7/10 Points - Part A Integration Blocked)**
 
 - FSDP2 + QLoRA + torch.compile working on 2x T4 GPUs
 - Kaggle notebook created and ready for upload
@@ -97,7 +97,8 @@
 
 **Files:**
 - `challenge_b_train.py` - Training script with FSDP2 + torch.compile
-- `modal_challenge_b.py` - Modal harness with `--fsdp2 --compile` flags
+- `challenge_b_train_with_part_a.py` - Training script with Part A kernel integration (blocked)
+- `modal_challenge_b.py` - Modal harness with `--fsdp2 --compile --part-a` flags
 - `kaggle_challenge_b_fsdp2_qlora.py` - Kaggle-ready Python script
 - `notebooks/kaggle_challenge_b_fsdp2_qlora.ipynb` - Kaggle notebook
 
@@ -108,49 +109,113 @@
 | Kaggle notebook | +2 |
 | **Total** | **7** |
 
-**Optional for +3 points:**
-- Integrate Part A kernel if faster than BnB
+**Part A Kernel Integration (Blocked - +3 points NOT achievable):**
+
+Implemented full integration in `challenge_b_train_with_part_a.py` with:
+- Monkey-patching of `bitsandbytes.functional.dequantize_4bit`
+- FSDP-aware shape handling in `_compute_shift_offsets_fsdp()`
+- Automatic fallback to BnB when kernel constraints not met
+
+**Architectural Incompatibility Finding:**
+The Part A NF4 kernel is fundamentally incompatible with FSDP2 weight sharding:
+
+| Property | Part A Kernel Expects | FSDP2 Reality |
+|----------|----------------------|---------------|
+| `quant_state.shape` | Full weight shape | Full unsharded shape (unchanged) |
+| `packed_bytes` | Full weight data | **Sharded** (half per GPU) |
+| Shape relationship | `packed_bytes * 2 == prod(shape)` | `packed_bytes * 2 == prod(shape) / world_size` |
+
+**Test Result (ap-o3JjC3jJgQECERo2vSw52T):**
+```
+Dequantization Statistics:
+  Part A kernel calls: 0
+  Part A kernel time: 0.0000s
+  BnB fallback calls: 53760
+  BnB fallback time: 54.3191s
+```
+
+All calls fall back to BnB because FSDP2 shards weights, making `full_elements != n_weights_effective`.
+
+**Root Cause (Expanded):** Deep investigation revealed BnB has **undocumented FSDP behavior**:
+
+```
+A.numel=4,194,304 (8M weights) → result.shape=(4096, 4096) = 16M weights
+```
+
+BnB returns **full-shaped tensors** from **half the data**! FSDP2/DTensor has complex semantics where:
+- Each rank's dequantize returns full shape with different valid portions
+- FSDP coordinates distributed matmul to combine valid portions correctly
+- The "garbage" portions are never used in actual computation
+
+Our kernel cannot replicate this behavior without deep FSDP2/DTensor integration.
+
+**Options to achieve +3 (NOT RECOMMENDED):**
+1. Deep FSDP2/DTensor integration to match BnB's implicit contract (weeks of work)
+2. Test on single GPU only (defeats Challenge B purpose)
 
 ---
 
 ## Challenge C: torch.compile for QLoRA
 
-**Status: COMPLETE (All Tests Passing)**
+**Status: COMPLETE (All Tests Passing - 9/9 Points Achievable)**
 
 - Implementation: `challenges/challenge_c_solution.py`
 - Modal harness: `modal_challenge_c.py`
-- Research: `research/oracle_flex_attention_part_a_gpt5pro.md`
+- Modal image: PyTorch 2.9.1+cu126 / triton 3.5.1 / bitsandbytes 0.48.2 / transformers 4.57+ / peft 0.13+
+- Research: `research/oracle_flex_attention_part_a_gpt5pro.md`, `research/oracle_challenge_c_no_fusion.md`, `research/oracle_peft_compile_friendly.md`, `research/oracle_flex_attention_dynamic_shapes.md`
 
 **Test Results:**
 | Test | GPU | Result | Details |
 |------|-----|--------|---------|
-| Graph break | T4 | PASS | Dynamic seq lengths (2, 25, 76 tokens) |
-| Training | T4 | PASS | 10/10 steps, loss=2.396, 75.49s |
+| Graph break | T4 | PASS | Dynamic seq lengths (2, 8, 16 tokens) |
+| Training | T4 | PASS | 10/10 steps, loss=2.394, 121.1s |
+| Graph break | A100 | PASS | flex_attention + dynamic shapes (2, 8, 15 tokens) |
+| Training | A100 | PASS | flex_attention + custom_op working |
+
+**A100 Environment (Session 11):**
+- PyTorch: 2.9.1+cu126 (upgraded from 2.5.1 for flex_attention+dynamic)
+- GPU: NVIDIA A100-SXM4-40GB (sm80)
+- flex_attention: AVAILABLE and WORKING
+- Modal App IDs: `ap-2GE951k0339fSvYPGYEvOr` (check), `ap-I6wChMN2QSkqtkQEodPhxv` (graph test), `ap-zLX9sIgePRcJlWpYRFj5SV` (training)
 
 **Compiled Components:**
 - LlamaMLP: `fullgraph=False, dynamic=True, max_autotune=True`
-- LlamaAttention: SDPA with compilation
+- LlamaAttention: **flex_attention on A100** (sm80+), SDPA on T4 (sm75)
 - LlamaRMSNorm: `fullgraph=True`
-- BnB Linear4bit + PEFT Linear4bit: `@torch._dynamo.disable()` with Part A kernel
+- BnB Linear4bit: `custom_op` path (in-graph, no dynamo.disable)
+- PEFT LoRA: Scaling values converted to tensor buffers
 
-**Part A Kernel Integration Attempt:**
-Attempted torch.library custom op integration but blocked by:
-- T4: bf16 PTX not supported on sm75 (model uses bf16 internally)
-- A100: Triton matmul dtype mismatch from inductor fusion
-- Root cause: inductor fusion with custom ops creates dtype conflicts
+**flex_attention Integration (Session 11):**
+Per Oracle (gpt-5-pro) research in `oracle_flex_attention_dynamic_shapes.md`:
+- PyTorch 2.5.1/2.6.0 do NOT support flex_attention + dynamic=True + BlockMask
+- Upgraded to PyTorch 2.9.1+cu126 which reliably supports flex_attention with dynamic shapes
+- `should_enable_flex_attention()` returns True for sm80+ GPUs
+- `get_causal_block_mask()` creates proper block masks with `@torch.compiler.disable`
+- Dynamic sequence lengths verified working: 2, 8, 15 tokens all processed correctly
 
-**Current Approach:** Part A kernel used via `@torch._dynamo.disable()` fallback.
+**custom_op Integration (Session 10):**
+Implemented `torch.library.custom_op` pattern per Oracle (gpt-5-pro) research:
+- `@custom_op("challenge_c::nf4_dequantize", mutates_args=())` - opaque to Inductor
+- `register_fake` for FakeTensor tracing (shape/dtype inference)
+- `register_kernel("cuda")` calls Part A Triton kernel
+- Fixed bf16→fp16 fallback on T4 (sm75) in `_precompute_nf4_metadata`
+- **NEW**: Offset cached as 0-D tensor (eliminates recompilations)
 
-**flex_attention Investigation:**
-Disabled by default due to instability in PyTorch 2.5.1. SDPA provides reliable compiled attention.
+**PEFT Compile-Friendly Fix (Session 10):**
+Per Oracle (gpt-5-pro) research in `oracle_peft_compile_friendly.md`:
+- Converted `self.scaling[adapter]` Python floats to 0-D tensor buffers
+- `prepare_peft_for_compile(model)` called after `get_peft_model()`
+- Converts 112 PEFT LoRA scaling values to tensor buffers
+- Precomputes NF4 metadata for 112 Linear4bit layers
+- **Eliminated `@torch._dynamo.disable()` on PEFT wrapper!**
 
-**Scoring Assessment (~1 point):**
-- ❌ BnB via dynamo.disable: -2 points (blocked by inductor issues)
-- ✅ Attention compiled (SDPA): +2 points
+**Scoring Assessment (9/9 points):**
+- ✅ BnB via custom_op: avoid -2 points (no dynamo.disable)
+- ✅ Attention compiled (flex_attention on A100): +2 points
+- ✅ flex_attention + dynamic sequence lengths: +3 points
 - ✅ MLP compiled: +1 point
 - ✅ Loss compiled: avoid -1
 - ✅ LayerNorms compiled: avoid -3
-- ❌ flex_attention disabled: 0 points
 
 ---
 

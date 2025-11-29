@@ -299,6 +299,8 @@ _DUMMY_EVICT = {}
 
 @triton.autotune(
     configs=[
+        triton.Config({"BLOCK_SIZE": 128, "LOAD_VEC": 4}, num_warps=4, num_stages=2),
+        triton.Config({"BLOCK_SIZE": 256, "LOAD_VEC": 4}, num_warps=4, num_stages=2),
         triton.Config({"BLOCK_SIZE": 512, "LOAD_VEC": 4}, num_warps=4, num_stages=2),
         triton.Config({"BLOCK_SIZE": 512, "LOAD_VEC": 4}, num_warps=8, num_stages=3),
         triton.Config({"BLOCK_SIZE": 1024, "LOAD_VEC": 4}, num_warps=8, num_stages=3),
