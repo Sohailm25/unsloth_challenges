@@ -68,7 +68,9 @@ def run_benchmarks():
     ref_time = test_dequantize(unsloth_dequantize)
     torch.cuda.synchronize()
     start_new = time.time()
-    new_time = test_dequantize(your_dequantize_nf4)
+    new_time = test_dequantize(
+        lambda w: your_dequantize_nf4(w, use_custom_asm=True, use_cache_eviction=False)
+    )
     torch.cuda.synchronize()
     print({"ref_time": ref_time, "new_time": new_time, "speedup": ref_time / new_time})
 

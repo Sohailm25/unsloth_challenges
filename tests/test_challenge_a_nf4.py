@@ -65,3 +65,14 @@ def test_optional_flags_do_not_change_shape():
     assert a.shape[1] == mlp.up_proj.in_features
     assert b.shape[1] == mlp.gate_proj.in_features
     assert c.shape[1] == mlp.down_proj.in_features
+
+
+@cuda_only
+def test_out_buffer_reused_when_not_provided():
+    torch.manual_seed(7)
+    mlp = MLP(hd=32, m=64, dtype=torch.float16)
+    # Two calls without supplying out: should reuse cached buffer to avoid extra allocs.
+    out1 = your_dequantize_nf4(mlp.up_proj, use_custom_asm=True, use_cache_eviction=False)
+    out2 = your_dequantize_nf4(mlp.up_proj, use_custom_asm=True, use_cache_eviction=False)
+    assert out1.data_ptr() == out2.data_ptr()
+    assert out1.shape == out2.shape
