@@ -115,6 +115,7 @@
 - Part A with gather cache enabled (app `ap-jXv1Vo3SxW3fwRmXRyomlq`): failed at step 0 with CUDA OOM (112MB alloc) while caching full packed bytes. Default remains cache-off.
 - Part A scatter-only pre-fix (reacquire/gather off, app `ap-pguabUVvocoBAWzXfTexkI`): train_time=192.15s, train_loss=6.8971; part_a_calls=13,440 and equal BnB calls due to shape mismatches; per-call speedup 0.02x.
 - Part A scatter-only after reshaping local output (reacquire/gather off, app `ap-plgw0ijiBY9cah0cCEfhqH`): train_time=181.96s, train_loss=13.43; part_a_calls=13,440, bnb_calls=9,600 from shape-mismatch fallbacks; per-call speedup 0.02x. Part A outputs still mismatch BnB (scatter yields (4096,4096) vs BnB (1024,4096)), so losses remain poor.
+- Part A scatter-only with orientation fix + None guard (`ap-04h3oDWChjV4Wy0yEDOb0D`, `ap-XkDoCC60xvILoHiEJsDXUT`, `ap-6c4ijTS242DS6fmugJMo3K`): all failed at step 0 with `AttributeError: 'NoneType' object has no attribute 'to'` inside BnB matmul, indicating patched dequant still returned None under FSDP2 scatter.
 
 **Part A Kernel Integration Notes (+3 gap):**
 
