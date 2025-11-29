@@ -1,6 +1,6 @@
 # Submission Bundle
 
-This folder collects the files a maintainer would review for scoring. Files are symlinks to the originals to avoid divergence.
+This folder collects the files for scoring. Files are symlinks to the originals to avoid divergence.
 
 ## Challenge A (NF4 Triton)
 - `challenge_a_nf4.py` – final kernel implementation. Test: `pytest tests/test_challenge_a_nf4.py -q`. Benchmark: see `logs/2025-11-29-part-a.log` for Part A integration timing vs B baseline, and re-run `modal_challenge_a.py::run_benchmarks` for speedup >=1.15x on T4.
