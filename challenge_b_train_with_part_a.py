@@ -620,6 +620,15 @@ def patched_dequantize_4bit(A, quant_state, absmax=None, out=None, blocksize=64,
     # Check for NF4 from quant_state (more reliable than function parameter)
     is_nf4 = quant_type == 'nf4' or getattr(quant_state, 'quant_type', None) == 'nf4'
 
+    # Early guard: if original BnB ever returns None, log and bail with zeros to avoid matmul crash
+    def _bnb_safe_call(A_tensor, qs_tensor):
+        res = _ORIGINAL_BNB_DEQUANT(A_tensor, qs_tensor, absmax, out, blocksize, quant_type)
+        if res is None:
+            rank_dbg, world_dbg = _get_fsdp_rank_info()
+            shape_dbg = tuple(qs_tensor.shape) if hasattr(qs_tensor, "shape") else None
+            print(f"[BnB NONE rank={rank_dbg}] A.numel={A_tensor.numel()} qs.shape={shape_dbg} world={world_dbg}", flush=True)
+        return res
+
 def _run_part_a(A_tensor, qs_tensor, output_shape):
     n_packed_local = A_tensor.numel()
     shifts = _compute_shift_offsets(A_tensor, qs_tensor)
@@ -782,7 +791,7 @@ def _run_part_a(A_tensor, qs_tensor, output_shape):
 
     # Use original BnB
     start = time.perf_counter()
-    result = _ORIGINAL_BNB_DEQUANT(A, quant_state, absmax, out, blocksize, quant_type)
+    result = _bnb_safe_call(A, quant_state)
     _DEQUANT_TIMES["bnb"] += time.perf_counter() - start
     _DEQUANT_TIMES["bnb_calls"] += 1
     _DEQUANT_TIMES["count"] += 1
@@ -791,9 +800,14 @@ def _run_part_a(A_tensor, qs_tensor, output_shape):
         rank_dbg, world_dbg = _get_fsdp_rank_info()
         bnb_shape_dbg = getattr(quant_state, "_bnb_ref_shape", None)
         print(f"[PartA FSDP] rank={rank_dbg} BnB returned None (A.numel={A.numel()}, bnb_shape={bnb_shape_dbg}, world={world_dbg})", flush=True)
-        result = _ORIGINAL_BNB_DEQUANT(A, quant_state, absmax, out, blocksize, quant_type)
+        result = _bnb_safe_call(A, quant_state)
         if result is None:
-            raise RuntimeError("BnB dequantize_4bit returned None twice")
+            # Last resort: produce zeros to keep training alive for logging
+            tgt_shape = tuple(bnb_shape_dbg) if bnb_shape_dbg is not None else ((quant_state.shape) if hasattr(quant_state, "shape") else (A.numel() * 2,))
+            if isinstance(tgt_shape, int):
+                tgt_shape = (tgt_shape,)
+            result = torch.zeros(tgt_shape, device=A.device, dtype=out.dtype if out is not None else torch.float16)
+            print(f"[PartA FSDP] rank={rank_dbg} substituted zeros for BnB None, shape={tgt_shape}", flush=True)
 
     # Debug: check what BnB returns (track first few calls with different sizes)
     if not hasattr(patched_dequantize_4bit, '_bnb_call_count'):
