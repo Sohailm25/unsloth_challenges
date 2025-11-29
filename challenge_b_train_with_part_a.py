@@ -787,7 +787,10 @@ def _run_part_a(A_tensor, qs_tensor, output_shape):
     _DEQUANT_TIMES["bnb_calls"] += 1
     _DEQUANT_TIMES["count"] += 1
     if result is None:
-        raise RuntimeError("BnB dequantize_4bit returned None")
+        # Extremely defensive: ensure we never propagate None to matmul
+        result = _ORIGINAL_BNB_DEQUANT(A, quant_state, absmax, out, blocksize, quant_type)
+        if result is None:
+            raise RuntimeError("BnB dequantize_4bit returned None")
 
     # Debug: check what BnB returns (track first few calls with different sizes)
     if not hasattr(patched_dequantize_4bit, '_bnb_call_count'):
