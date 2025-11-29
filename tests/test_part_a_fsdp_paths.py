@@ -125,3 +125,18 @@ def test_scatter_accepts_flat_local_out():
     assert full.shape == torch.Size([4, 2])
     assert torch.equal(full[:2], torch.ones_like(full[:2]))
     assert torch.equal(full[2:], torch.zeros_like(full[2:]))
+
+
+def test_scatter_slices_when_kernel_returns_full():
+    qs = types.SimpleNamespace(shape=(4, 2))
+    rank = 1
+    world = 2
+    A_local = torch.zeros(2, dtype=torch.uint8)
+    # Simulate kernel returning full shape even on shard
+    full_local = torch.arange(8, dtype=torch.float32).view(4, 2)
+
+    full = _scatter_local_to_full(full_local, qs, A_local, rank, world)
+    assert full.shape == torch.Size([4, 2])
+    # Rank1 should keep rows 2:4 from full_local
+    assert torch.equal(full[:2], torch.zeros_like(full[:2]))
+    assert torch.equal(full[2:], full_local[2:])

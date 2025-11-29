@@ -496,11 +496,23 @@ def _scatter_local_to_full(local_out, quant_state, A, rank, world):
     if local_rows != rows // world:
         return None
 
-    if local_out.dim() == 1 and local_out.numel() == local_rows * cols:
-        local_out = local_out.view(local_rows, cols)
+    row_start = rank * local_rows
+
+    # Normalize local_out to shard shape
+    if local_out.dim() == 1:
+        if local_out.numel() == local_rows * cols:
+            local_out = local_out.view(local_rows, cols)
+        elif local_out.numel() == rows * cols:
+            local_out = local_out.view(rows, cols)[row_start : row_start + local_rows]
+        else:
+            return None
+    elif local_out.dim() == 2:
+        if local_out.shape == (rows, cols):
+            local_out = local_out[row_start : row_start + local_rows]
+        elif local_out.shape != (local_rows, cols):
+            return None
 
     out_full = torch.zeros((rows, cols), device=local_out.device, dtype=local_out.dtype)
-    row_start = rank * local_rows
     out_full[row_start : row_start + local_rows] = local_out
     return out_full
 
