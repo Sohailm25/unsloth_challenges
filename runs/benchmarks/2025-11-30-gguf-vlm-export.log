@@ -20,6 +20,11 @@ Modal GPU attempt for `liuhaotian/llava-v1.6-mistral-7b` to broaden VLM coverage
 - Action left: rerun with newer transformers when modal base image is updated or pin a supported llava-v1.6 fork.
 
 ## description of what was run, for what purpose
+Modal image rebuild attempt to upgrade transformers to 4.50.2 for llava-v1.6 support.
+- Outcome: Build failed at pip resolution because `unsloth_zoo==2025.11.5` pins transformers <=4.57.2 and >=4.51.3; requested 4.50.2 is out of range. Image not built; no run executed.
+- Action left: would require an unsloth_zoo release that supports newer transformers or a custom fork; otherwise llava-v1.6 remains unsupported in this environment.
+
+## description of what was run, for what purpose
 Modal GPU run of `modal_gguf_vlm_export.py::run` for `Qwen/Qwen2-VL-7B-Instruct` to extend coverage to a larger Qwen2-VL model.
 - Environment: Modal A10G, torch 2.5.1+cu121, unsloth editable branch `gguf-vision-export`, unsloth_zoo==2025.11.5.
 - Actions: merged to 16-bit, patched converter (qwen2 vocab + clip-vision allowance), converted text + mmproj to GGUF, quantized text to q8_0.
