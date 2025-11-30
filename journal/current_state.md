@@ -16,6 +16,12 @@
   - `unsloth-challenges-r7m` (FSDPA scatter None bug) status in_progress.
   - `unsloth-challenges-vhz` (Qwen-VL GGUF export blocked by torch<2.6) status in_progress.
 
+## Attention Backend Unification
+- Unified dispatcher in `unsloth/attn/api.py` routes SDPA, xformers, flash-attn2, and flex-attention with backend prefs/env override; models patched (LLaMA/Mistral/Qwen3/Gemma2/Granite/Cohere/FalconH1/vision) to call `unified_attention` and pass FlexSpec when needed.
+- Capability guard disables flash-attn on compute capability < 8; Flex masks permitted by LLaMA path; dtype handling covers fp16/bf16/fp8.
+- Tests: `tests/test_attention_backend_selection.py` and `tests/test_unified_attention_smoke.py` passing on CPU.
+- GPU validation: Modal A100 (torch 2.5.1+cu121 + flash-attn 2.8.3 cp310) selects `flash_attn_2` and passes smoke; log `runs/benchmarks/2025-11-30-ampere-flash-attn.log`. T4 falls back to SDPA/xformers (no FA wheels; FA gated off for SM75).
+
 ## Environment
 - `.venv` Python 3.11.
 - Modal gguf-vlm image: torch 2.5.1+cu121, transformers 4.57.2, unsloth_zoo 2025.11.5, bitsandbytes, transformers_stream_generator, einops.

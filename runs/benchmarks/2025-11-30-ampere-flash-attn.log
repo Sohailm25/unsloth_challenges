@@ -1,0 +1,9 @@
+## description of what was run, for what purpose
+Modal A100 smoke test of unified attention dispatcher with flash-attn 2.8.3 + torch 2.5.1+cu121 using modal_attention_flash_ampere.py to confirm backend selection and forward correctness on Ampere.
+
+### command
+source .venv/bin/activate && cd unsloth && modal run modal_attention_flash_ampere.py
+
+### output (truncated)
+caps Capabilities(has_flash_attn=True, has_xformers=False, has_flex=True, supports_sdpa=True, compute_capability=(8, 0), torch_version='2.5.1+cu121')
+backend flash_attn_2
