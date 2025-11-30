@@ -2,7 +2,8 @@
 
 - Part A / FSDP2: `_infer_local_2d_shape` prefers row-shard inference but handles column-only shards; `_infer_shard_axis` + `_decide_shard_axis` use input feature dim to detect column shards. MatMul: row shards forward gather (trim to total_rows) and backward all_reduce; column shards forward all_reduce and backward **all_gather dx** using per-rank col sizes, then trim. Added column padding in Part A dequant + MatMul so shard weights expose full input feature width (fixes 2048 vs 4096 col mismatch). Helper tests 11/11 passing including new padding test.
 - patched_dequantize_4bit already returns zeros on `None`; indentation in `_run_part_a` verified (no functional change).
-- Modal TinyLlama 1-step reruns after fixes blocked by Modal spend limit (`Resource exhausted: workspace billing cycle spend limit reached`); no fresh GPU validation yet. Logs captured in `runs/benchmarks/2025-11-30-part-a-sharded-gather12.log`.
+- Modal Part A FSDP 1-step (T4x2, app ap-oqU0d69ZKyX4HA1zTxYXH9) hung during first training step; manually stopped after ~15 minutes, so no loss/metrics yet. Logs: `runs/benchmarks/2025-11-30-part-a-colpad-step1*.log`.
+- Modal Part A TinyLlama 1-step (T4x2, app ap-NbaZS3EoIDazF8HIFIG7pE) also hung at first training step; stopped manually after ~12 minutes. Logs: `runs/benchmarks/2025-11-30-part-a-colpad-tinyllama-step1.log`.
 
 ## GGUF Vision Export
 - Working conversions on Modal A10G: `unsloth/llava-1.5-7b-hf`, `Qwen/Qwen2-VL-2B-Instruct`, `Qwen/Qwen2-VL-7B-Instruct` → text `Q8_0.gguf` + `BF16-mmproj.gguf` via `modal_gguf_vlm_export.py`.

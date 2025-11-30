@@ -1,0 +1,183 @@
+## description of what was run, for what purpose
+Part A NF4 sharded col-padding sanity, 1 step, T4x2, compile off, detach.
+
+✓ Initialized. View run at 
+https://modal.com/apps/sohailm25/main/ap-oqU0d69ZKyX4HA1zTxYXH9
+✓ Created objects.
+├── 🔨 Created mount /Volumes/Extreme 
+│   Pro/unsloth-challenges/modal_challenge_b.py
+├── 🔨 Created mount challenge_b_train_with_part_a.py
+├── 🔨 Created mount challenge_b_train.py
+├── 🔨 Created mount /Volumes/Extreme Pro/unsloth-challenges/challenges
+├── 🔨 Created function run_fsdp_training.
+├── 🔨 Created function run_single_gpu_baseline.
+├── 🔨 Created function test_fsdp2_setup.
+└── 🔨 Created function run_part_a_kernel_training.
+============================================================
+FSDP2 + QLoRA + Part A kernel Training
+============================================================
+CUDA available: True
+GPU count: 2
+  GPU 0: Tesla T4
+  GPU 1: Tesla T4
+Part A env toggles: | reacquire=on | gather=on | scatter=on | gather_cache=off | sharded_parta=on
+
+Running command: accelerate launch --config_file /tmp/fsdp_config.yaml /workspace/challenge_b_train_with_part_a.py --max_steps 1 --use_gradient_checkpointing --max_seq_length 2048 --per_device_train_batch_size 1 --use_part_a_kernel
+
+PyTorch version: 2.9.1+cu128
+CUDA available: True
+CUDA device count: 2
+  GPU 0: Tesla T4
+  GPU 1: Tesla T4
+PyTorch version: 2.9.1+cu128
+CUDA available: True
+CUDA device count: 2
+  GPU 0: Tesla T4
+  GPU 1: Tesla T4
+============================================================
+Running FSDP2 + QLoRA  + Part A kernel DISTRIBUTED TRAINING
+============================================================
+============================================================
+Running FSDP2 + QLoRA  + Part A kernel DISTRIBUTED TRAINING
+============================================================
+[W1130 08:49:55.549757396 Utils.hpp:137] Warning: Environment variable NCCL_ASYNC_ERROR_HANDLING is deprecated; use TORCH_NCCL_ASYNC_ERROR_HANDLING instead (function operator())
+[W1130 08:49:55.549796031 Utils.hpp:137] Warning: Environment variable NCCL_ASYNC_ERROR_HANDLING is deprecated; use TORCH_NCCL_ASYNC_ERROR_HANDLING instead (function operator())
+[Gloo] Rank 1 is connected to 1 peer ranks. Expected number of connected peer ranks is : 1
+[Gloo] Rank 0 is connected to 1 peer ranks. Expected number of connected peer ranks is : 1
+Detected kernel version 4.4.0, which is below the recommended minimum of 5.5.0; this can cause the process to hang. It is recommended to upgrade the kernel to the minimum version or higher.
+World size: 2
+Local rank: 0
+Device: cuda:0
+Part A kernel ENABLED for NF4 dequantization
+Part A kernel ENABLED for NF4 dequantization
+Loading model: meta-llama/Llama-3.1-8B-Instruct
+`torch_dtype` is deprecated! Use `dtype` instead!
+`torch_dtype` is deprecated! Use `dtype` instead!
+
+[1ALoading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]
+[1ALoading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]
+[1ALoading checkpoint shards:  25%|██▌       | 1/4 [00:05<00:16,  5.35s/it]
+[1ALoading checkpoint shards:  25%|██▌       | 1/4 [00:05<00:16,  5.60s/it]
+[1ALoading checkpoint shards:  50%|█████     | 2/4 [00:11<00:11,  5.65s/it]
+2025-11-30 02:49:35-06:00 ============================================================
+2025-11-30 02:49:35-06:00 FSDP2 + QLoRA + Part A kernel Training
+2025-11-30 02:49:35-06:00 ============================================================
+2025-11-30 02:49:40-06:00 CUDA available: True
+2025-11-30 02:49:40-06:00 GPU count: 2
+2025-11-30 02:49:40-06:00   GPU 0: Tesla T4
+2025-11-30 02:49:40-06:00   GPU 1: Tesla T4
+2025-11-30 02:49:40-06:00 Part A env toggles: | reacquire=on | gather=on | scatter=on | gather_cache=off | sharded_parta=on
+2025-11-30 02:49:40-06:00 
+2025-11-30 02:49:40-06:00 Running command: accelerate launch --config_file /tmp/fsdp_config.yaml /workspace/challenge_b_train_with_part_a.py --max_steps 1 --use_gradient_checkpointing --max_seq_length 2048 --per_device_train_batch_size 1 --use_part_a_kernel
+2025-11-30 02:49:40-06:00 
+2025-11-30 02:49:53-06:00 PyTorch version: 2.9.1+cu128
+2025-11-30 02:49:53-06:00 CUDA available: True
+2025-11-30 02:49:53-06:00 CUDA device count: 2
+2025-11-30 02:49:53-06:00   GPU 0: Tesla T4
+2025-11-30 02:49:53-06:00   GPU 1: Tesla T4
+2025-11-30 02:49:53-06:00 PyTorch version: 2.9.1+cu128
+2025-11-30 02:49:53-06:00 CUDA available: True
+2025-11-30 02:49:53-06:00 CUDA device count: 2
+2025-11-30 02:49:53-06:00   GPU 0: Tesla T4
+2025-11-30 02:49:53-06:00   GPU 1: Tesla T4
+2025-11-30 02:49:55-06:00 ============================================================
+2025-11-30 02:49:55-06:00 Running FSDP2 + QLoRA  + Part A kernel DISTRIBUTED TRAINING
+2025-11-30 02:49:55-06:00 ============================================================
+2025-11-30 02:49:55-06:00 ============================================================
+2025-11-30 02:49:55-06:00 Running FSDP2 + QLoRA  + Part A kernel DISTRIBUTED TRAINING
+2025-11-30 02:49:55-06:00 ============================================================
+2025-11-30 02:49:55-06:00 [W1130 08:49:55.549757396 Utils.hpp:137] Warning: Environment variable NCCL_ASYNC_ERROR_HANDLING is deprecated; use TORCH_NCCL_ASYNC_ERROR_HANDLING instead (function operator())
+2025-11-30 02:49:55-06:00 [W1130 08:49:55.549796031 Utils.hpp:137] Warning: Environment variable NCCL_ASYNC_ERROR_HANDLING is deprecated; use TORCH_NCCL_ASYNC_ERROR_HANDLING instead (function operator())
+2025-11-30 02:49:55-06:00 [Gloo] Rank 1 is connected to 1 peer ranks. Expected number of connected peer ranks is : 1
+2025-11-30 02:49:55-06:00 [Gloo] Rank 0 is connected to 1 peer ranks. Expected number of connected peer ranks is : 1
+2025-11-30 02:49:55-06:00 Detected kernel version 4.4.0, which is below the recommended minimum of 5.5.0; this can cause the process to hang. It is recommended to upgrade the kernel to the minimum version or higher.
+2025-11-30 02:49:55-06:00 World size: 2
+2025-11-30 02:49:55-06:00 Local rank: 0
+2025-11-30 02:49:55-06:00 Device: cuda:0
+2025-11-30 02:49:59-06:00 Part A kernel ENABLED for NF4 dequantization
+2025-11-30 02:49:59-06:00 Part A kernel ENABLED for NF4 dequantization
+2025-11-30 02:49:59-06:00 Loading model: meta-llama/Llama-3.1-8B-Instruct
+2025-11-30 02:50:00-06:00 `torch_dtype` is deprecated! Use `dtype` instead!
+2025-11-30 02:50:00-06:00 `torch_dtype` is deprecated! Use `dtype` instead!
+2025-11-30 02:51:09-06:00 
+2025-11-30 02:51:09-06:00 [1A2025-11-30 02:51:09-06:00 Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]
+2025-11-30 02:51:15-06:00 [1A2025-11-30 02:51:15-06:00 Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]
+2025-11-30 02:51:15-06:00 [1A2025-11-30 02:51:15-06:00 Loading checkpoint shards:  25%|██▌       | 1/4 [00:05<00:16,  5.35s/it]
+2025-11-30 02:51:21-06:00 [1A2025-11-30 02:51:21-06:00 Loading checkpoint shards:  25%|██▌       | 1/4 [00:05<00:16,  5.60s/it]
+2025-11-30 02:51:21-06:00 [1A2025-11-30 02:51:21-06:00 Loading checkpoint shards:  50%|█████     | 2/4 [00:11<00:11,  5.65s/it]
+2025-11-30 02:51:27-06:00 [1A2025-11-30 02:51:27-06:00 Loading checkpoint shards:  50%|█████     | 2/4 [00:11<00:11,  5.89s/it]
+2025-11-30 02:51:27-06:00 [1A2025-11-30 02:51:27-06:00 Loading checkpoint shards:  75%|███████▌  | 3/4 [00:17<00:05,  5.83s/it]
+2025-11-30 02:51:27-06:00 [1A2025-11-30 02:51:27-06:00 Loading checkpoint shards:  75%|███████▌  | 3/4 [00:17<00:05,  5.95s/it]2025-11-30 02:51:27-06:00 Loading checkpoint shards: 100%|██████████| 4/4 [00:17<00:00,  3.73s/it]2025-11-30 02:51:27-06:00 Loading checkpoint shards: 100%|██████████| 4/4 [00:17<00:00,  4.46s/it]
+2025-11-30 02:51:27-06:00 2025-11-30 02:51:27-06:00 Loading checkpoint shards: 100%|██████████| 4/4 [00:18<00:00,  3.81s/it]2025-11-30 02:51:27-06:00 Loading checkpoint shards: 100%|██████████| 4/4 [00:18<00:00,  4.55s/it]
+2025-11-30 02:51:33-06:00 
+2025-11-30 02:51:33-06:00 [1A2025-11-30 02:51:33-06:00 Generating train split: 0 examples [00:00, ? examples/s]
+2025-11-30 02:51:33-06:00 [1A2025-11-30 02:51:33-06:00 Generating train split: 69218 examples [00:00, 490616.50 examples/s]
+2025-11-30 02:51:34-06:00 [1A2025-11-30 02:51:34-06:00 Generating train split: 161402 examples [00:00, 546530.79 examples/s]2025-11-30 02:51:34-06:00 Generating train split: 210289 examples [00:00, 546560.60 examples/s]
+2025-11-30 02:51:36-06:00 
+2025-11-30 02:51:37-06:00 [1A2025-11-30 02:51:37-06:00 Adding EOS to train dataset (num_proc=4):   0%|          | 0/21029 [00:00<?, ? examples/s]
+2025-11-30 02:51:38-06:00 [1A2025-11-30 02:51:38-06:00 Adding EOS to train dataset (num_proc=4):   2%|▏         | 409/21029 [00:00<00:43, 470.51 examples/s]
+2025-11-30 02:51:38-06:00 [1A2025-11-30 02:51:38-06:00 Adding EOS to train dataset (num_proc=4):   9%|▉         | 1867/21029 [00:01<00:13, 1387.28 examples/s]
+2025-11-30 02:51:38-06:00 [1A2025-11-30 02:51:38-06:00 Adding EOS to train dataset (num_proc=4):  32%|███▏      | 6816/21029 [00:01<00:02, 6279.38 examples/s]
+2025-11-30 02:51:38-06:00 [1A2025-11-30 02:51:38-06:00 Adding EOS to train dataset (num_proc=4):  64%|██████▍   | 13489/21029 [00:01<00:00, 13951.64 examples/s]2025-11-30 02:51:38-06:00 Adding EOS to train dataset (num_proc=4): 100%|██████████| 21029/21029 [00:01<00:00, 10700.17 examples/s]
+2025-11-30 02:51:38-06:00 
+2025-11-30 02:51:41-06:00 [1A2025-11-30 02:51:41-06:00 Tokenizing train dataset (num_proc=4):   0%|          | 0/21029 [00:00<?, ? examples/s]
+2025-11-30 02:51:41-06:00 [1A2025-11-30 02:51:41-06:00 Tokenizing train dataset (num_proc=4):   0%|          | 23/21029 [00:02<37:47,  9.27 examples/s]
+2025-11-30 02:51:41-06:00 [1A2025-11-30 02:51:41-06:00 Tokenizing train dataset (num_proc=4):   1%|          | 243/21029 [00:02<03:01, 114.21 examples/s]
+2025-11-30 02:51:42-06:00 [1A2025-11-30 02:51:42-06:00 Tokenizing train dataset (num_proc=4):   2%|▏         | 442/21029 [00:03<01:40, 205.56 examples/s]
+2025-11-30 02:51:42-06:00 [1A2025-11-30 02:51:42-06:00 Tokenizing train dataset (num_proc=4):   4%|▍         | 846/21029 [00:03<00:41, 481.60 examples/s]
+2025-11-30 02:51:42-06:00 [1A2025-11-30 02:51:42-06:00 Tokenizing train dataset (num_proc=4):   5%|▌         | 1058/21029 [00:03<00:31, 636.15 examples/s]
+2025-11-30 02:51:42-06:00 [1A2025-11-30 02:51:42-06:00 Tokenizing train dataset (num_proc=4):   7%|▋         | 1500/21029 [00:03<00:18, 1078.25 examples/s]
+2025-11-30 02:51:42-06:00 [1A2025-11-30 02:51:42-06:00 Tokenizing train dataset (num_proc=4):   8%|▊         | 1762/21029 [00:03<00:15, 1281.32 examples/s]
+2025-11-30 02:51:42-06:00 [1A2025-11-30 02:51:42-06:00 Tokenizing train dataset (num_proc=4):  10%|█         | 2200/21029 [00:03<00:10, 1803.30 examples/s]
+2025-11-30 02:51:42-06:00 [1A2025-11-30 02:51:42-06:00 Tokenizing train dataset (num_proc=4):  13%|█▎        | 2655/21029 [00:03<00:07, 2334.28 examples/s]
+2025-11-30 02:51:42-06:00 [1A2025-11-30 02:51:42-06:00 Tokenizing train dataset (num_proc=4):  15%|█▌        | 3191/21029 [00:03<00:06, 2946.20 examples/s]
+2025-11-30 02:51:42-06:00 [1A2025-11-30 02:51:42-06:00 Tokenizing train dataset (num_proc=4):  19%|█▉        | 3952/21029 [00:04<00:04, 3687.16 examples/s]
+2025-11-30 02:51:43-06:00 [1A2025-11-30 02:51:43-06:00 Tokenizing train dataset (num_proc=4):  22%|██▏       | 4699/21029 [00:04<00:03, 4571.08 examples/s]
+2025-11-30 02:51:43-06:00 [1A2025-11-30 02:51:43-06:00 Tokenizing train dataset (num_proc=4):  26%|██▋       | 5542/21029 [00:04<00:02, 5529.12 examples/s]
+2025-11-30 02:51:43-06:00 [1A2025-11-30 02:51:43-06:00 Tokenizing train dataset (num_proc=4):  31%|███       | 6436/21029 [00:04<00:02, 6405.34 examples/s]
+2025-11-30 02:51:43-06:00 [1A2025-11-30 02:51:43-06:00 Tokenizing train dataset (num_proc=4):  35%|███▍      | 7326/21029 [00:04<00:02, 6629.81 examples/s]
+2025-11-30 02:51:43-06:00 [1A2025-11-30 02:51:43-06:00 Tokenizing train dataset (num_proc=4):  39%|███▊      | 8110/21029 [00:04<00:01, 6943.28 examples/s]
+2025-11-30 02:51:43-06:00 [1A2025-11-30 02:51:43-06:00 Tokenizing train dataset (num_proc=4):  43%|████▎     | 9001/21029 [00:04<00:01, 7473.56 examples/s]
+2025-11-30 02:51:43-06:00 [1A2025-11-30 02:51:43-06:00 Tokenizing train dataset (num_proc=4):  47%|████▋     | 9907/21029 [00:04<00:01, 7907.07 examples/s]
+2025-11-30 02:51:43-06:00 [1A2025-11-30 02:51:43-06:00 Tokenizing train dataset (num_proc=4):  52%|█████▏    | 10841/21029 [00:04<00:01, 7857.33 examples/s]
+2025-11-30 02:51:43-06:00 [1A2025-11-30 02:51:43-06:00 Tokenizing train dataset (num_proc=4):  56%|█████▌    | 11696/21029 [00:04<00:01, 7986.71 examples/s]
+2025-11-30 02:51:44-06:00 [1A2025-11-30 02:51:44-06:00 Tokenizing train dataset (num_proc=4):  60%|█████▉    | 12556/21029 [00:05<00:01, 8146.06 examples/s]
+2025-11-30 02:51:44-06:00 [1A2025-11-30 02:51:44-06:00 Tokenizing train dataset (num_proc=4):  64%|██████▍   | 13473/21029 [00:05<00:00, 8430.98 examples/s]
+2025-11-30 02:51:44-06:00 [1A2025-11-30 02:51:44-06:00 Tokenizing train dataset (num_proc=4):  68%|██████▊   | 14360/21029 [00:05<00:00, 8551.09 examples/s]
+2025-11-30 02:51:44-06:00 [1A2025-11-30 02:51:44-06:00 Tokenizing train dataset (num_proc=4):  72%|███████▏  | 15228/21029 [00:05<00:00, 8468.88 examples/s]
+2025-11-30 02:51:44-06:00 [1A2025-11-30 02:51:44-06:00 Tokenizing train dataset (num_proc=4):  77%|███████▋  | 16089/21029 [00:05<00:00, 8252.20 examples/s]
+2025-11-30 02:51:44-06:00 [1A2025-11-30 02:51:44-06:00 Tokenizing train dataset (num_proc=4):  81%|████████  | 17033/21029 [00:05<00:00, 8510.24 examples/s]
+2025-11-30 02:51:44-06:00 [1A2025-11-30 02:51:44-06:00 Tokenizing train dataset (num_proc=4):  85%|████████▌ | 17971/21029 [00:05<00:00, 7701.08 examples/s]
+2025-11-30 02:51:44-06:00 [1A2025-11-30 02:51:44-06:00 Tokenizing train dataset (num_proc=4):  89%|████████▉ | 18766/21029 [00:05<00:00, 7325.58 examples/s]
+2025-11-30 02:51:45-06:00 [1A2025-11-30 02:51:45-06:00 Tokenizing train dataset (num_proc=4):  93%|█████████▎| 19560/21029 [00:06<00:00, 6667.41 examples/s]
+2025-11-30 02:51:45-06:00 [1A2025-11-30 02:51:45-06:00 Tokenizing train dataset (num_proc=4):  97%|█████████▋| 20308/21029 [00:06<00:00, 5925.71 examples/s]
+2025-11-30 02:51:45-06:00 [1A2025-11-30 02:51:45-06:00 Tokenizing train dataset (num_proc=4): 100%|█████████▉| 20997/21029 [00:06<00:00, 4447.04 examples/s]2025-11-30 02:51:45-06:00 Tokenizing train dataset (num_proc=4): 100%|██████████| 21029/21029 [00:06<00:00, 3157.53 examples/s]
+2025-11-30 02:51:45-06:00 
+2025-11-30 02:51:46-06:00 [1A2025-11-30 02:51:46-06:00 Truncating train dataset (num_proc=4):   0%|          | 0/21029 [00:00<?, ? examples/s]
+2025-11-30 02:51:46-06:00 [1A2025-11-30 02:51:46-06:00 Truncating train dataset (num_proc=4):   5%|▍         | 1000/21029 [00:00<00:14, 1346.97 examples/s]2025-11-30 02:51:46-06:00 Truncating train dataset (num_proc=4): 100%|██████████| 21029/21029 [00:01<00:00, 14752.14 examples/s]
+2025-11-30 02:51:48-06:00 Detected kernel version 4.4.0, which is below the recommended minimum of 5.5.0; this can cause the process to hang. It is recommended to upgrade the kernel to the minimum version or higher.
+2025-11-30 02:51:48-06:00 The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'eos_token_id': 128009, 'pad_token_id': 128009}.
+2025-11-30 02:51:48-06:00 Trainable params: 167,772,160 (5.66%)
+2025-11-30 02:51:48-06:00 Starting FSDP2 training...
+2025-11-30 02:51:48-06:00 The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'eos_token_id': 128009, 'pad_token_id': 128009}.
+2025-11-30 02:52:14-06:00 /usr/local/lib/python3.11/site-packages/accelerate/utils/fsdp_utils.py:715: UserWarning: FSDP upcast of low precision parameters to fp32 (since mixed_precision != 'no') may affect the precision of model checkpoints.
+2025-11-30 02:52:14-06:00   warnings.warn(
+2025-11-30 02:52:14-06:00 
+2025-11-30 02:52:16-06:00 [1A2025-11-30 02:52:16-06:00   0%|          | 0/1 [00:00<?, ?it/s]/usr/local/lib/python3.11/site-packages/torch/_dynamo/eval_frame.py:1044: UserWarning: torch.utils.checkpoint: the use_reentrant parameter should be passed explicitly. Starting in PyTorch 2.9, calling checkpoint without use_reentrant will raise an exception. use_reentrant=False is recommended, but if you need to preserve the current default behavior, you can pass use_reentrant=True. Refer to docs for more details on the differences between the two variants.
+2025-11-30 02:52:16-06:00   return fn(*args, **kwargs)
+2025-11-30 02:52:16-06:00 /usr/local/lib/python3.11/site-packages/torch/_dynamo/eval_frame.py:1044: UserWarning: torch.utils.checkpoint: the use_reentrant parameter should be passed explicitly. Starting in PyTorch 2.9, calling checkpoint without use_reentrant will raise an exception. use_reentrant=False is recommended, but if you need to preserve the current default behavior, you can pass use_reentrant=True. Refer to docs for more details on the differences between the two variants.
+2025-11-30 02:52:16-06:00   return fn(*args, **kwargs)
+2025-11-30 02:52:16-06:00 [SHIFT DEBUG] n_bytes=4194304, n_weights_effective=8388608
+2025-11-30 02:52:16-06:00 [SHIFT DEBUG] blocksize=64, bytes_per_absmax=32
+2025-11-30 02:52:16-06:00 [SHIFT DEBUG] blocksize2=256
+2025-11-30 02:52:16-06:00 [SHIFT DEBUG] Success! shifts=(5, 8)
+2025-11-30 02:52:16-06:00 [SHIFT DEBUG] n_bytes=4194304, n_weights_effective=8388608
+2025-11-30 02:52:16-06:00 [SHIFT DEBUG] blocksize=64, bytes_per_absmax=32
+2025-11-30 02:52:16-06:00 [SHIFT DEBUG] blocksize2=256
+2025-11-30 02:52:16-06:00 [SHIFT DEBUG] Success! shifts=(5, 8)
+2025-11-30 02:52:24-06:00 /usr/local/lib/python3.11/site-packages/torch/_dynamo/eval_frame.py:1044: UserWarning: torch.utils.checkpoint: the use_reentrant parameter should be passed explicitly. Starting in PyTorch 2.9, calling checkpoint without use_reentrant will raise an exception. use_reentrant=False is recommended, but if you need to preserve the current default behavior, you can pass use_reentrant=True. Refer to docs for more details on the differences between the two variants.
+2025-11-30 02:52:24-06:00   return fn(*args, **kwargs)
+2025-11-30 02:52:24-06:00 /usr/local/lib/python3.11/site-packages/torch/_dynamo/eval_frame.py:1044: UserWarning: torch.utils.checkpoint: the use_reentrant parameter should be passed explicitly. Starting in PyTorch 2.9, calling checkpoint without use_reentrant will raise an exception. use_reentrant=False is recommended, but if you need to preserve the current default behavior, you can pass use_reentrant=True. Refer to docs for more details on the differences between the two variants.
+2025-11-30 02:52:24-06:00   return fn(*args, **kwargs)
+
+RESULT: hung at first training step; manual stop after ~15 min (no metrics).

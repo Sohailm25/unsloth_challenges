@@ -1,0 +1,59 @@
+## description of what was run, for what purpose
+Part A NF4 sharded col-padding sanity, 1 step, T4x2, compile off.
+
+✓ Initialized. View run at 
+https://modal.com/apps/sohailm25/main/ap-PLFOaJNaDOxKB0dS6dRtjP
+✓ Created objects.
+├── 🔨 Created mount /Volumes/Extreme 
+│   Pro/unsloth-challenges/modal_challenge_b.py
+├── 🔨 Created mount challenge_b_train_with_part_a.py
+├── 🔨 Created mount challenge_b_train.py
+├── 🔨 Created mount /Volumes/Extreme Pro/unsloth-challenges/challenges
+├── 🔨 Created function run_fsdp_training.
+├── 🔨 Created function run_single_gpu_baseline.
+├── 🔨 Created function test_fsdp2_setup.
+└── 🔨 Created function run_part_a_kernel_training.
+============================================================
+FSDP2 + QLoRA + Part A kernel Training
+============================================================
+CUDA available: True
+GPU count: 2
+  GPU 0: Tesla T4
+  GPU 1: Tesla T4
+Part A env toggles: | reacquire=on | gather=on | scatter=on | gather_cache=off | sharded_parta=on
+
+Running command: accelerate launch --config_file /tmp/fsdp_config.yaml /workspace/challenge_b_train_with_part_a.py --max_steps 1 --use_gradient_checkpointing --max_seq_length 2048 --per_device_train_batch_size 1 --use_part_a_kernel
+
+PyTorch version: 2.9.1+cu128
+CUDA available: True
+CUDA device count: 2
+  GPU 0: Tesla T4
+  GPU 1: Tesla T4
+PyTorch version: 2.9.1+cu128
+CUDA available: True
+CUDA device count: 2
+  GPU 0: Tesla T4
+  GPU 1: Tesla T4
+============================================================
+Running FSDP2 + QLoRA  + Part A kernel DISTRIBUTED TRAINING
+============================================================
+============================================================
+Running FSDP2 + QLoRA  + Part A kernel DISTRIBUTED TRAINING
+============================================================
+[W1130 08:44:54.674162890 Utils.hpp:137] Warning: Environment variable NCCL_ASYNC_ERROR_HANDLING is deprecated; use TORCH_NCCL_ASYNC_ERROR_HANDLING instead (function operator())
+[W1130 08:44:54.676612410 Utils.hpp:137] Warning: Environment variable NCCL_ASYNC_ERROR_HANDLING is deprecated; use TORCH_NCCL_ASYNC_ERROR_HANDLING instead (function operator())
+[Gloo] Rank 0 is connected to 1 peer ranks. Expected number of connected peer ranks is : 1
+[Gloo] Rank 1 is connected to 1 peer ranks. Expected number of connected peer ranks is : 1
+World size: 2
+Local rank: 0
+Device: cuda:0
+Detected kernel version 4.4.0, which is below the recommended minimum of 5.5.0; this can cause the process to hang. It is recommended to upgrade the kernel to the minimum version or higher.
+Part A kernel ENABLED for NF4 dequantization
+Part A kernel ENABLED for NF4 dequantization
+Loading model: meta-llama/Llama-3.1-8B-Instruct
+`torch_dtype` is deprecated! Use `dtype` instead!
+`torch_dtype` is deprecated! Use `dtype` instead!
+
+[1ALoading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]
+
+RESULT: hung at first training step; manual stop (no metrics).

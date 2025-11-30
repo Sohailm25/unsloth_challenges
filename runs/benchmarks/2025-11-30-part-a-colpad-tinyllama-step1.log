@@ -1,0 +1,110 @@
+## description of what was run, for what purpose
+Part A NF4 sharded col-padding sanity, TinyLlama-1.1B, 1 step, T4x2.
+
+✓ Initialized. View run at 
+https://modal.com/apps/sohailm25/main/ap-NbaZS3EoIDazF8HIFIG7pE
+✓ Created objects.
+├── 🔨 Created mount /Volumes/Extreme 
+│   Pro/unsloth-challenges/modal_challenge_b.py
+├── 🔨 Created mount challenge_b_train_with_part_a.py
+├── 🔨 Created mount challenge_b_train.py
+├── 🔨 Created mount /Volumes/Extreme Pro/unsloth-challenges/challenges
+├── 🔨 Created function run_fsdp_training.
+├── 🔨 Created function run_single_gpu_baseline.
+├── 🔨 Created function test_fsdp2_setup.
+└── 🔨 Created function run_part_a_kernel_training.
+============================================================
+FSDP2 + QLoRA + Part A kernel Training
+============================================================
+CUDA available: True
+GPU count: 2
+  GPU 0: Tesla T4
+  GPU 1: Tesla T4
+Part A env toggles: | reacquire=on | gather=on | scatter=on | gather_cache=off | sharded_parta=on
+
+Running command: accelerate launch --config_file /tmp/fsdp_config.yaml /workspace/challenge_b_train_with_part_a.py --max_steps 1 --use_gradient_checkpointing --model_name TinyLlama/TinyLlama-1.1B-Chat-v1.0 --max_seq_length 1024 --per_device_train_batch_size 1 --use_part_a_kernel
+
+PyTorch version: 2.9.1+cu128
+CUDA available: True
+CUDA device count: 2
+  GPU 0: Tesla T4
+  GPU 1: Tesla T4
+PyTorch version: 2.9.1+cu128
+CUDA available: True
+CUDA device count: 2
+  GPU 0: Tesla T4
+  GPU 1: Tesla T4
+============================================================
+Running FSDP2 + QLoRA  + Part A kernel DISTRIBUTED TRAINING
+============================================================
+============================================================
+Running FSDP2 + QLoRA  + Part A kernel DISTRIBUTED TRAINING
+============================================================
+[W1130 09:06:50.390629160 Utils.hpp:137] Warning: Environment variable NCCL_ASYNC_ERROR_HANDLING is deprecated; use TORCH_NCCL_ASYNC_ERROR_HANDLING instead (function operator())
+[W1130 09:06:50.393040827 Utils.hpp:137] Warning: Environment variable NCCL_ASYNC_ERROR_HANDLING is deprecated; use TORCH_NCCL_ASYNC_ERROR_HANDLING instead (function operator())
+[Gloo] Rank 0 is connected to 1 peer ranks. Expected number of connected peer ranks is : 1
+[Gloo] Rank 1 is connected to 1 peer ranks. Expected number of connected peer ranks is : 1
+Detected kernel version 4.4.0, which is below the recommended minimum of 5.5.0; this can cause the process to hang. It is recommended to upgrade the kernel to the minimum version or higher.
+World size: 2
+Local rank: 0
+Device: cuda:0
+Part A kernel ENABLED for NF4 dequantization
+Part A kernel ENABLED for NF4 dequantization
+Loading model: TinyLlama/TinyLlama-1.1B-Chat-v1.0
+`torch_dtype` is deprecated! Use `dtype` instead!
+`torch_dtype` is deprecated! Use `dtype` instead!
+
+[1AGenerating train split: 0 examples [00:00, ? examples/s]
+[1AGenerating train split: 69218 examples [00:00, 471225.13 examples/s]
+[1AGenerating train split: 161402 examples [00:00, 550473.45 examples/s]Generating train split: 210289 examples [00:00, 552766.28 examples/s]
+
+[1AAdding EOS to train dataset (num_proc=4):   0%|          | 0/21029 [00:00<?, ? examples/s]
+[1AAdding EOS to train dataset (num_proc=4):   2%|▏         | 457/21029 [00:00<00:25, 810.95 examples/s]
+[1AAdding EOS to train dataset (num_proc=4):  24%|██▍       | 5137/21029 [00:00<00:01, 9760.39 examples/s]
+[1AAdding EOS to train dataset (num_proc=4):  68%|██████▊   | 14230/21029 [00:00<00:00, 27453.18 examples/s]Adding EOS to train dataset (num_proc=4): 100%|██████████| 21029/21029 [00:00<00:00, 22547.92 examples/s]
+
+[1ATokenizing train dataset (num_proc=4):   0%|          | 0/21029 [00:00<?, ? examples/s]
+[1ATokenizing train dataset (num_proc=4):   0%|          | 74/21029 [00:00<03:26, 101.47 examples/s]
+[1ATokenizing train dataset (num_proc=4):   2%|▏         | 523/21029 [00:00<00:25, 816.86 examples/s]
+[1ATokenizing train dataset (num_proc=4):   9%|▊         | 1806/21029 [00:00<00:06, 3016.32 examples/s]
+[1ATokenizing train dataset (num_proc=4):  14%|█▎        | 2873/21029 [00:01<00:03, 4611.82 examples/s]
+[1ATokenizing train dataset (num_proc=4):  19%|█▉        | 3975/21029 [00:01<00:02, 5803.62 examples/s]
+[1ATokenizing train dataset (num_proc=4):  23%|██▎       | 4919/21029 [00:01<00:02, 6667.21 examples/s]
+[1ATokenizing train dataset (num_proc=4):  29%|██▉       | 6168/21029 [00:01<00:01, 8140.74 examples/s]
+[1ATokenizing train dataset (num_proc=4):  35%|███▍      | 7349/21029 [00:01<00:01, 9113.21 examples/s]
+[1ATokenizing train dataset (num_proc=4):  40%|████      | 8442/21029 [00:01<00:01, 9373.99 examples/s]
+[1ATokenizing train dataset (num_proc=4):  46%|████▋     | 9736/21029 [00:01<00:01, 10115.92 examples/s]
+[1ATokenizing train dataset (num_proc=4):  52%|█████▏    | 10918/21029 [00:01<00:00, 10579.16 examples/s]
+[1ATokenizing train dataset (num_proc=4):  58%|█████▊    | 12120/21029 [00:01<00:00, 10968.56 examples/s]
+[1ATokenizing train dataset (num_proc=4):  64%|██████▎   | 13402/21029 [00:01<00:00, 11282.98 examples/s]
+[1ATokenizing train dataset (num_proc=4):  70%|██████▉   | 14651/21029 [00:02<00:00, 11567.05 examples/s]
+[1ATokenizing train dataset (num_proc=4):  75%|███████▌  | 15836/21029 [00:02<00:00, 11629.55 examples/s]
+[1ATokenizing train dataset (num_proc=4):  81%|████████  | 17021/21029 [00:02<00:00, 5102.36 examples/s]
+[1ATokenizing train dataset (num_proc=4):  87%|████████▋ | 18212/21029 [00:02<00:00, 6150.91 examples/s]
+[1ATokenizing train dataset (num_proc=4):  92%|█████████▏| 19439/21029 [00:02<00:00, 7251.97 examples/s]
+[1ATokenizing train dataset (num_proc=4):  98%|█████████▊| 20613/21029 [00:03<00:00, 7407.95 examples/s]Tokenizing train dataset (num_proc=4): 100%|██████████| 21029/21029 [00:03<00:00, 6375.45 examples/s]
+
+[1ATruncating train dataset (num_proc=4):   0%|          | 0/21029 [00:00<?, ? examples/s]
+[1ATruncating train dataset (num_proc=4):   5%|▍         | 1000/21029 [00:00<00:08, 2351.46 examples/s]Truncating train dataset (num_proc=4): 100%|██████████| 21029/21029 [00:00<00:00, 38218.06 examples/s]
+Detected kernel version 4.4.0, which is below the recommended minimum of 5.5.0; this can cause the process to hang. It is recommended to upgrade the kernel to the minimum version or higher.
+Trainable params: 50,462,720 (11.91%)
+Starting FSDP2 training...
+The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'pad_token_id': 2}.
+The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'pad_token_id': 2}.
+/usr/local/lib/python3.11/site-packages/accelerate/utils/fsdp_utils.py:715: UserWarning: FSDP upcast of low precision parameters to fp32 (since mixed_precision != 'no') may affect the precision of model checkpoints.
+  warnings.warn(
+
+[1A  0%|          | 0/1 [00:00<?, ?it/s]/usr/local/lib/python3.11/site-packages/torch/_dynamo/eval_frame.py:1044: UserWarning: torch.utils.checkpoint: the use_reentrant parameter should be passed explicitly. Starting in PyTorch 2.9, calling checkpoint without use_reentrant will raise an exception. use_reentrant=False is recommended, but if you need to preserve the current default behavior, you can pass use_reentrant=True. Refer to docs for more details on the differences between the two variants.
+  return fn(*args, **kwargs)
+/usr/local/lib/python3.11/site-packages/torch/_dynamo/eval_frame.py:1044: UserWarning: torch.utils.checkpoint: the use_reentrant parameter should be passed explicitly. Starting in PyTorch 2.9, calling checkpoint without use_reentrant will raise an exception. use_reentrant=False is recommended, but if you need to preserve the current default behavior, you can pass use_reentrant=True. Refer to docs for more details on the differences between the two variants.
+  return fn(*args, **kwargs)
+[SHIFT DEBUG] n_bytes=1048576, n_weights_effective=2097152
+[SHIFT DEBUG] blocksize=64, bytes_per_absmax=32
+[SHIFT DEBUG] blocksize2=256
+[SHIFT DEBUG] Success! shifts=(5, 8)
+[SHIFT DEBUG] n_bytes=1048576, n_weights_effective=2097152
+[SHIFT DEBUG] blocksize=64, bytes_per_absmax=32
+[SHIFT DEBUG] blocksize2=256
+[SHIFT DEBUG] Success! shifts=(5, 8)
+
+RESULT: hung at first training step; manual stop after ~12 min (no metrics).
