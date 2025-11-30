@@ -1,0 +1,114 @@
+## description of what was run, for what purpose
+Part A scatter-only after scope fix; reacquire off, gather off, scatter on; cache off; max_steps=5.
+Command: modal run modal_challenge_b.py::run_part_a_kernel_training --use-part-a --no-use-torch-compile --max-steps 5 --disable-reacquire --disable-gather
+
+✓ Initialized. View run at 
+https://modal.com/apps/sohailm25/main/ap-aM0SZsKIGWOs6P2cVvjdIb
+✓ Created objects.
+├── 🔨 Created mount /Volumes/Extreme 
+│   Pro/unsloth-challenges/modal_challenge_b.py
+├── 🔨 Created mount challenge_b_train.py
+├── 🔨 Created mount challenge_b_train_with_part_a.py
+├── 🔨 Created mount /Volumes/Extreme Pro/unsloth-challenges/challenges
+├── 🔨 Created function run_fsdp_training.
+├── 🔨 Created function run_single_gpu_baseline.
+├── 🔨 Created function test_fsdp2_setup.
+└── 🔨 Created function run_part_a_kernel_training.
+============================================================
+FSDP2 + QLoRA + Part A kernel Training
+============================================================
+CUDA available: True
+GPU count: 2
+  GPU 0: Tesla T4
+  GPU 1: Tesla T4
+Part A env toggles: | reacquire=off | gather=off | scatter=on | gather_cache=off
+
+Running command: accelerate launch --config_file /tmp/fsdp_config.yaml /workspace/challenge_b_train_with_part_a.py --max_steps 5 --use_gradient_checkpointing --use_part_a_kernel
+
+PyTorch version: 2.9.1+cu128
+CUDA available: True
+CUDA device count: 2
+  GPU 0: Tesla T4
+  GPU 1: Tesla T4
+PyTorch version: 2.9.1+cu128
+CUDA available: True
+CUDA device count: 2
+  GPU 0: Tesla T4
+  GPU 1: Tesla T4
+============================================================
+Running FSDP2 + QLoRA  + Part A kernel DISTRIBUTED TRAINING
+============================================================
+============================================================
+Running FSDP2 + QLoRA  + Part A kernel DISTRIBUTED TRAINING
+============================================================
+[W1130 00:44:39.572620103 Utils.hpp:137] Warning: Environment variable NCCL_ASYNC_ERROR_HANDLING is deprecated; use TORCH_NCCL_ASYNC_ERROR_HANDLING instead (function operator())
+[W1130 00:44:39.572698400 Utils.hpp:137] Warning: Environment variable NCCL_ASYNC_ERROR_HANDLING is deprecated; use TORCH_NCCL_ASYNC_ERROR_HANDLING instead (function operator())
+[Gloo] Rank 0 is connected to 1 peer ranks. Expected number of connected peer ranks is : 1
+[Gloo] Rank 1 is connected to 1 peer ranks. Expected number of connected peer ranks is : 1
+Detected kernel version 4.4.0, which is below the recommended minimum of 5.5.0; this can cause the process to hang. It is recommended to upgrade the kernel to the minimum version or higher.
+World size: 2
+Local rank: 0
+Device: cuda:0
+[rank1]: Traceback (most recent call last):
+[rank1]:   File "/workspace/challenge_b_train_with_part_a.py", line 1158, in <module>
+[rank1]:     main()
+[rank1]:   File "/workspace/challenge_b_train_with_part_a.py", line 1154, in main
+[rank1]:     run_fsdp2_training(args)
+[rank1]:   File "/workspace/challenge_b_train_with_part_a.py", line 990, in run_fsdp2_training
+[rank1]:     enable_part_a_kernel()
+[rank1]:   File "/workspace/challenge_b_train_with_part_a.py", line 863, in enable_part_a_kernel
+[rank1]:     _bnb_shape_helper = _ensure_bnb_shape_cached
+[rank1]:                         ^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]: NameError: name '_ensure_bnb_shape_cached' is not defined
+[rank0]: Traceback (most recent call last):
+[rank0]:   File "/workspace/challenge_b_train_with_part_a.py", line 1158, in <module>
+[rank0]:     main()
+[rank0]:   File "/workspace/challenge_b_train_with_part_a.py", line 1154, in main
+[rank0]:     run_fsdp2_training(args)
+[rank0]:   File "/workspace/challenge_b_train_with_part_a.py", line 990, in run_fsdp2_training
+[rank0]:     enable_part_a_kernel()
+[rank0]:   File "/workspace/challenge_b_train_with_part_a.py", line 863, in enable_part_a_kernel
+[rank0]:     _bnb_shape_helper = _ensure_bnb_shape_cached
+[rank0]:                         ^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]: NameError: name '_ensure_bnb_shape_cached' is not defined
+[rank0]:[W1130 00:44:44.631983645 ProcessGroupNCCL.cpp:1524] Warning: WARNING: destroy_process_group() was not called before program exit, which can leak resources. For more info, please see https://pytorch.org/docs/stable/distributed.html#shutdown (function operator())
+[rank1]:[W1130 00:44:45.098836456 AllocatorConfig.cpp:28] Warning: PYTORCH_CUDA_ALLOC_CONF is deprecated, use PYTORCH_ALLOC_CONF instead (function operator())
+[rank0]:[W1130 00:44:45.151044989 AllocatorConfig.cpp:28] Warning: PYTORCH_CUDA_ALLOC_CONF is deprecated, use PYTORCH_ALLOC_CONF instead (function operator())
+W1130 00:44:45.525000 6 site-packages/torch/distributed/elastic/multiprocessing/api.py:908] Sending process 12 closing signal SIGTERM
+E1130 00:44:45.542000 6 site-packages/torch/distributed/elastic/multiprocessing/api.py:882] failed (exitcode: 1) local_rank: 1 (pid: 13) of binary: /usr/local/bin/python
+Traceback (most recent call last):
+  File "/usr/local/bin/accelerate", line 7, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/accelerate/commands/accelerate_cli.py", line 50, in main
+    args.func(args)
+  File "/usr/local/lib/python3.11/site-packages/accelerate/commands/launch.py", line 1268, in launch_command
+    multi_gpu_launcher(args)
+  File "/usr/local/lib/python3.11/site-packages/accelerate/commands/launch.py", line 899, in multi_gpu_launcher
+    distrib_run.run(args)
+  File "/usr/local/lib/python3.11/site-packages/torch/distributed/run.py", line 927, in run
+    elastic_launch(
+  File "/usr/local/lib/python3.11/site-packages/torch/distributed/launcher/api.py", line 156, in __call__
+    return launch_agent(self._config, self._entrypoint, list(args))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/torch/distributed/launcher/api.py", line 293, in launch_agent
+    raise ChildFailedError(
+torch.distributed.elastic.multiprocessing.errors.ChildFailedError: 
+============================================================
+/workspace/challenge_b_train_with_part_a.py FAILED
+------------------------------------------------------------
+Failures:
+  <NO_OTHER_FAILURES>
+------------------------------------------------------------
+Root Cause (first observed failure):
+[0]:
+  time      : 2025-11-30_00:44:45
+  host      : localhost
+  rank      : 1 (local_rank: 1)
+  exitcode  : 1 (pid: 13)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+============================================================
+Stopping app - local entrypoint completed.
+✓ App completed. View run at 
+https://modal.com/apps/sohailm25/main/ap-aM0SZsKIGWOs6P2cVvjdIb

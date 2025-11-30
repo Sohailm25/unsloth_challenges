@@ -33,6 +33,12 @@ HAS_FLEX_ATTENTION = TORCH_VERSION >= (2, 5)
 
 if HAS_FLEX_ATTENTION:
     from torch.nn.attention.flex_attention import flex_attention, create_block_mask
+    # and_masks is available in PyTorch 2.5+ for composing multiple mask_mod functions
+    try:
+        from torch.nn.attention.flex_attention import and_masks
+        HAS_AND_MASKS = True
+    except ImportError:
+        HAS_AND_MASKS = False
 
 
 def get_gpu_capability(device: torch.device = None):
@@ -396,6 +402,129 @@ _BLOCK_MASK_CACHE = {}
 
 
 # ============================================================================
+# Sliding Window Attention (SWA) Support
+# ============================================================================
+# SWA limits attention to a local window around each token.
+# Combined with causal masking, each token attends only to the previous
+# window_size tokens (plus itself).
+
+# Global sliding window size (set via configure_sliding_window or from model config)
+_SLIDING_WINDOW_SIZE: Optional[int] = None
+
+
+def configure_sliding_window(window_size: Optional[int]):
+    """
+    Configure the global sliding window size for flex_attention.
+
+    Args:
+        window_size: Number of tokens to attend to (lookback window).
+                    None disables SWA (full causal attention).
+                    Typical values: 4096 (Mistral), 2048, 1024.
+    """
+    global _SLIDING_WINDOW_SIZE
+    _SLIDING_WINDOW_SIZE = int(window_size) if window_size is not None else None
+    if _SLIDING_WINDOW_SIZE is not None:
+        print(f"[Challenge C] Sliding window attention enabled: window_size={_SLIDING_WINDOW_SIZE}")
+
+
+def get_sliding_window_size() -> Optional[int]:
+    """Get the configured sliding window size (None if SWA disabled)."""
+    return _SLIDING_WINDOW_SIZE
+
+
+def _create_sliding_window_mask_fn(window_size: int):
+    """
+    Create a sliding window mask_mod function for flex_attention.
+
+    For decoder-style models, combines causal masking with sliding window:
+    - Causal: q_idx >= kv_idx (can only attend to past)
+    - Window: q_idx - kv_idx <= window_size (limit lookback)
+
+    Args:
+        window_size: Max tokens to look back (Python int for compile stability)
+
+    Returns:
+        mask_mod function compatible with create_block_mask
+    """
+    W = int(window_size)
+
+    def swa_causal_mask(b, h, q_idx, kv_idx):
+        # Causal + sliding window: attend to past tokens within window
+        return (q_idx >= kv_idx) & ((q_idx - kv_idx) <= W)
+
+    return swa_causal_mask
+
+
+def _create_swa_document_mask_fn(window_size: int, doc_ids: torch.Tensor):
+    """
+    Create a combined SWA + causal + document boundary mask_mod function.
+
+    Combines three constraints:
+    1. Causal: q_idx >= kv_idx
+    2. Sliding window: q_idx - kv_idx <= window_size
+    3. Document boundary: same document only
+
+    Args:
+        window_size: Max tokens to look back
+        doc_ids: [batch, seq_len] tensor of document IDs
+
+    Returns:
+        mask_mod function for create_block_mask
+    """
+    W = int(window_size)
+
+    def swa_doc_causal_mask(b, h, q_idx, kv_idx):
+        # Causal constraint
+        causal = q_idx >= kv_idx
+        # Sliding window constraint
+        in_window = (q_idx - kv_idx) <= W
+        # Document boundary constraint
+        same_doc = doc_ids[b, q_idx] == doc_ids[b, kv_idx]
+        return causal & in_window & same_doc
+
+    return swa_doc_causal_mask
+
+
+def _create_swa_block_mask(
+    batch_size: int,
+    num_heads: int,
+    seq_len: int,
+    device: torch.device,
+    window_size: int,
+    doc_ids: Optional[torch.Tensor] = None,
+):
+    """
+    Create a BlockMask for sliding window attention.
+
+    Args:
+        batch_size: Batch size
+        num_heads: Number of attention heads
+        seq_len: Sequence length
+        device: Device to create mask on
+        window_size: Sliding window size
+        doc_ids: Optional document IDs for packed sequences
+
+    Returns:
+        BlockMask for flex_attention
+    """
+    if doc_ids is not None:
+        # SWA + causal + document boundary
+        mask_fn = _create_swa_document_mask_fn(window_size, doc_ids)
+    else:
+        # SWA + causal only
+        mask_fn = _create_sliding_window_mask_fn(window_size)
+
+    return create_block_mask(
+        mask_fn,
+        B=batch_size,
+        H=num_heads,
+        Q_LEN=seq_len,
+        KV_LEN=seq_len,
+        device=device,
+    )
+
+
+# ============================================================================
 # Document Boundary Detection for Packing
 # ============================================================================
 
@@ -715,11 +844,29 @@ def create_compiled_llama_attention_flex():
         # NOTE: Using inline mask creation (no graph break) - PyTorch 2.9.1+ compatible
         kv_len = key_states.size(2)
 
+        # Check for sliding window attention configuration
+        sliding_window = get_sliding_window_size()
+
         # Use lower-right mask when kv_len != q_len (prefill vs decode)
         if kv_len != q_len:
             block_mask = _create_causal_lower_right_mask_inline(bsz, num_heads, q_len, kv_len, hidden_states.device)
+        elif sliding_window is not None:
+            # Sliding Window Attention enabled
+            # Combine SWA with document boundary masking when packing is used
+            if position_ids is not None:
+                doc_ids = _compute_doc_ids(position_ids)
+                block_mask = _create_swa_block_mask(
+                    bsz, num_heads, kv_len, hidden_states.device,
+                    window_size=sliding_window, doc_ids=doc_ids
+                )
+            else:
+                # SWA without document boundaries
+                block_mask = _create_swa_block_mask(
+                    bsz, num_heads, kv_len, hidden_states.device,
+                    window_size=sliding_window, doc_ids=None
+                )
         else:
-            # Always use document-aware masking when position_ids is available
+            # No SWA - use standard causal or document-aware masking
             # flex_attention is only enabled with packing=True on A100+, so we always
             # need document boundary masking to prevent cross-document attention
             if position_ids is not None:
@@ -974,9 +1121,20 @@ def patch_llama_mlp():
     print("[Challenge C] Patched LlamaMLP.forward with compiled version")
 
 
-def patch_llama_attention(use_flex_attention: bool = True):
-    """Patch LlamaAttention.forward with compiled version."""
+def patch_llama_attention(use_flex_attention: bool = True, sliding_window: Optional[int] = None):
+    """
+    Patch LlamaAttention.forward with compiled version.
+
+    Args:
+        use_flex_attention: Enable flex_attention on supported GPUs (A100+)
+        sliding_window: Sliding window size for SWA. None disables SWA.
+                       Typical values: 4096 (Mistral), 2048, 1024.
+    """
     import transformers.models.llama.modeling_llama as llama_module
+
+    # Configure sliding window attention if specified
+    if sliding_window is not None:
+        configure_sliding_window(sliding_window)
 
     # flex_attention with document boundary masking for packing support.
     # Document boundaries are detected from position_ids resets and used to
@@ -994,8 +1152,10 @@ def patch_llama_attention(use_flex_attention: bool = True):
     if can_use_flex:
         # Use flex_attention on A100/H100 for +3 points
         # Document boundary masking prevents cross-document attention with packing
+        # SWA is automatically applied if configure_sliding_window was called
         compiled_attn = create_compiled_llama_attention_flex()
-        print(f"[Challenge C] Patched LlamaAttention with flex_attention + document masking (sm{major}{minor})")
+        swa_info = f" + SWA(window={sliding_window})" if sliding_window else ""
+        print(f"[Challenge C] Patched LlamaAttention with flex_attention + document masking{swa_info} (sm{major}{minor})")
     else:
         # Use SDPA on older GPUs or when flex_attention unavailable
         compiled_attn = create_compiled_llama_attention_sdpa()
@@ -1213,13 +1373,19 @@ def patch_bnb_linear4bit(use_part_a_kernel: bool = False):
         print(f"[Challenge C] PEFT BnB patch skipped: {e}")
 
 
-def apply_all_patches(use_flex_attention: bool = True, use_part_a_kernel: bool = False):
+def apply_all_patches(
+    use_flex_attention: bool = True,
+    use_part_a_kernel: bool = False,
+    sliding_window: Optional[int] = None,
+):
     """
     Apply all patches for torch.compile compatibility.
 
     Args:
         use_flex_attention: Enable flex_attention on supported GPUs (A100+)
         use_part_a_kernel: Use Part A Triton NF4 kernel for dequantization (+1 point)
+        sliding_window: Sliding window size for SWA. None disables SWA.
+                       Typical values: 4096 (Mistral), 2048, 1024.
     """
     # Runtime check: override use_flex_attention based on actual GPU capability
     actual_use_flex = use_flex_attention and should_enable_flex_attention()
@@ -1230,7 +1396,7 @@ def apply_all_patches(use_flex_attention: bool = True, use_part_a_kernel: bool =
 
     # Must patch before model loading
     patch_llama_mlp()
-    patch_llama_attention(use_flex_attention=actual_use_flex)
+    patch_llama_attention(use_flex_attention=actual_use_flex, sliding_window=sliding_window)
     patch_llama_rms_norm()
     patch_llama_loss()  # Compiled cross-entropy loss (avoids -1 penalty)
     patch_bnb_linear4bit(use_part_a_kernel=use_part_a_kernel)

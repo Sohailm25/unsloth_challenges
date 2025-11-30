@@ -123,6 +123,15 @@ def _compute_shift_offsets_fsdp(weight, quant_state):
 
     result = int(math.log2(bytes_per_absmax)), int(math.log2(blocksize2))
     if debug: print(f"[SHIFT DEBUG] Success! shifts={result}", flush=True)
+    if result is None:
+        rank_dbg, world_dbg = _get_fsdp_rank_info()
+        bnb_shape_dbg = getattr(quant_state, "_bnb_ref_shape", None)
+        qshape_dbg = tuple(quant_state.shape) if hasattr(quant_state, "shape") else None
+        print(f"[PartA FSDP] rank={rank_dbg} final None result (A.numel={A.numel()}, bnb_shape={bnb_shape_dbg}, qshape={qshape_dbg}, world={world_dbg})", flush=True)
+        tgt_shape = tuple(bnb_shape_dbg) if bnb_shape_dbg is not None else (qshape_dbg if qshape_dbg is not None else (A.numel() * 2,))
+        if isinstance(tgt_shape, int):
+            tgt_shape = (tgt_shape,)
+        result = torch.zeros(tgt_shape, device=A.device, dtype=out.dtype if out is not None else torch.float16)
     return result
 
 
@@ -629,6 +638,25 @@ def patched_dequantize_4bit(A, quant_state, absmax=None, out=None, blocksize=64,
             print(f"[BnB NONE rank={rank_dbg}] A.numel={A_tensor.numel()} qs.shape={shape_dbg} world={world_dbg}", flush=True)
         return res
 
+    # Preload BnB reference shape for orientation; cache on quant_state
+    bnb_shape_pre = _ensure_bnb_shape_cached(A, quant_state)
+    if bnb_shape_pre is not None:
+        setattr(quant_state, "_bnb_ref_shape", bnb_shape_pre)
+
+    # Dry-run BnB to detect None and log quant_state metadata before any Part A logic
+    dry_res = _bnb_safe_call(A, quant_state)
+    if dry_res is None:
+        qshape = tuple(quant_state.shape) if hasattr(quant_state, "shape") else None
+        has_absmax = hasattr(quant_state, "absmax")
+        has_state2 = hasattr(quant_state, "state2")
+        has_code = hasattr(quant_state, "code")
+        rank_dbg, world_dbg = _get_fsdp_rank_info()
+        print(f"[BnB DRY NONE rank={rank_dbg}] qshape={qshape} absmax={has_absmax} state2={has_state2} code={has_code} world={world_dbg}", flush=True)
+        bnb_shape = getattr(quant_state, "_bnb_ref_shape", None) or qshape or (A.numel() * 2,)
+        if isinstance(bnb_shape, int):
+            bnb_shape = (bnb_shape,)
+        return torch.zeros(bnb_shape, device=A.device, dtype=out.dtype if out is not None else torch.float16)
+
 def _run_part_a(A_tensor, qs_tensor, output_shape):
     n_packed_local = A_tensor.numel()
     shifts = _compute_shift_offsets(A_tensor, qs_tensor)
@@ -831,11 +859,47 @@ def enable_part_a_kernel():
     """Enable Part A kernel for dequantization."""
     global _ORIGINAL_BNB_DEQUANT, _USE_PART_A_KERNEL
     import bitsandbytes.functional as bnb_F
+    import bitsandbytes.autograd._functions as bnb_autograd
+    _bnb_shape_helper = _ensure_bnb_shape_cached
 
     if _ORIGINAL_BNB_DEQUANT is None:
         _ORIGINAL_BNB_DEQUANT = bnb_F.dequantize_4bit
 
     bnb_F.dequantize_4bit = patched_dequantize_4bit
+
+    # Patch MatMul4Bit to guard against None dequant output
+    def _patched_matmul_forward(ctx, A, B, out=None, bias=None, quant_state=None):
+        out_dev = A.device
+        out_dtype = A.dtype
+        bnb_shape = getattr(quant_state, "_bnb_ref_shape", None)
+        if bnb_shape is None:
+            bnb_shape = _bnb_shape_helper(B, quant_state)
+            if bnb_shape is not None:
+                setattr(quant_state, "_bnb_ref_shape", bnb_shape)
+        deq = patched_dequantize_4bit(B, quant_state)
+        if deq is None:
+            rank_dbg, world_dbg = _get_fsdp_rank_info()
+            qshape = tuple(quant_state.shape) if hasattr(quant_state, "shape") else None
+            print(f"[MatMul4Bit NONE rank={rank_dbg}] qshape={qshape} bnb_shape={bnb_shape} world={world_dbg}", flush=True)
+            shape = bnb_shape or qshape or (A.shape[-1],)
+            if isinstance(shape, int):
+                shape = (shape,)
+            deq = torch.zeros(shape, device=out_dev, dtype=out_dtype)
+        # Choose orientation to match A.shape[-1]
+        if deq.shape[-1] == A.shape[-1]:
+            weight = deq
+        elif deq.shape[0] == A.shape[-1]:
+            weight = deq.t().contiguous()
+        else:
+            # Fallback: try transpose and log
+            rank_dbg, world_dbg = _get_fsdp_rank_info()
+            print(f"[MatMul4Bit ORIENT rank={rank_dbg}] A_last={A.shape[-1]} deq.shape={tuple(deq.shape)} world={world_dbg}", flush=True)
+            weight = deq.t().contiguous()
+        res = torch.nn.functional.linear(A, weight, bias)
+        return res
+
+    bnb_autograd.MatMul4Bit.forward = _patched_matmul_forward
+
     _USE_PART_A_KERNEL = True
     print("Part A kernel ENABLED for NF4 dequantization")
 

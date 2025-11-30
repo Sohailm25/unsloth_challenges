@@ -1,11 +1,12 @@
-# Current State (2025-11-29)
+# Current State (2025-11-30)
 
 ## Today
-- Reviewed repository layout to identify final submission files for each challenge; no code changes performed.
+- Added GGUF converter patch to allow CLIP/SigLIP vision encoders during mmproj export; updated tests.
+- Validated GGUF export on Modal A10G for Qwen2-VL-2B-Instruct and Llava-1.5-7B (text + mmproj produced, q8_0 text quant).
 
 ## Branch Info
-- Branch: chore/split-challenges; ahead of origin
-- bd issue `unsloth-challenges-guu` closed after custom asm implementation (Challenge A)
+- Branch: gguf-vision-export (root) with unsloth submodule on attention-unify-interface.
+- Active bd issue: `unsloth-challenges-x5t` (GGUF vision export); status in progress.
 
 ## Environment
 - `.venv` Py3.11
