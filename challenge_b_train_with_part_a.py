@@ -638,6 +638,11 @@ def patched_dequantize_4bit(A, quant_state, absmax=None, out=None, blocksize=64,
             print(f"[BnB NONE rank={rank_dbg}] A.numel={A_tensor.numel()} qs.shape={shape_dbg} world={world_dbg}", flush=True)
         return res
 
+    # Preload BnB reference shape for orientation; cache on quant_state
+    bnb_shape_pre = _ensure_bnb_shape_cached(A, quant_state)
+    if bnb_shape_pre is not None:
+        setattr(quant_state, "_bnb_ref_shape", bnb_shape_pre)
+
     # Dry-run BnB to detect None and log quant_state metadata before any Part A logic
     dry_res = _bnb_safe_call(A, quant_state)
     if dry_res is None:
@@ -865,11 +870,11 @@ def enable_part_a_kernel():
     def _patched_matmul_forward(ctx, A, B, out=None, bias=None, quant_state=None):
         out_dev = A.device
         out_dtype = A.dtype
+        bnb_shape = getattr(quant_state, "_bnb_ref_shape", None)
         deq = patched_dequantize_4bit(B, quant_state)
         if deq is None:
             rank_dbg, world_dbg = _get_fsdp_rank_info()
             qshape = tuple(quant_state.shape) if hasattr(quant_state, "shape") else None
-            bnb_shape = getattr(quant_state, "_bnb_ref_shape", None)
             print(f"[MatMul4Bit NONE rank={rank_dbg}] qshape={qshape} bnb_shape={bnb_shape} world={world_dbg}", flush=True)
             shape = bnb_shape or qshape or (A.shape[-1],)
             if isinstance(shape, int):
