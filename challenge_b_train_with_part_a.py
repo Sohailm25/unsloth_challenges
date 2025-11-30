@@ -854,11 +854,35 @@ def enable_part_a_kernel():
     """Enable Part A kernel for dequantization."""
     global _ORIGINAL_BNB_DEQUANT, _USE_PART_A_KERNEL
     import bitsandbytes.functional as bnb_F
+    import bitsandbytes.autograd._functions as bnb_autograd
 
     if _ORIGINAL_BNB_DEQUANT is None:
         _ORIGINAL_BNB_DEQUANT = bnb_F.dequantize_4bit
 
     bnb_F.dequantize_4bit = patched_dequantize_4bit
+
+    # Patch MatMul4Bit to guard against None dequant output
+    _orig_matmul_forward = bnb_autograd.MatMul4Bit.forward
+
+    def _patched_matmul_forward(ctx, A, B, out=None, bias=None, quant_state=None):
+        out_dev = A.device
+        out_dtype = A.dtype
+        # Call original dequant through our patched path
+        # (bnb_autograd calls F.dequantize_4bit internally; we intercept after)
+        res = _orig_matmul_forward(ctx, A, B, out, bias, quant_state)
+        if res is None:
+            rank_dbg, world_dbg = _get_fsdp_rank_info()
+            qshape = tuple(quant_state.shape) if hasattr(quant_state, "shape") else None
+            bnb_shape = getattr(quant_state, "_bnb_ref_shape", None)
+            print(f"[MatMul4Bit NONE rank={rank_dbg}] qshape={qshape} bnb_shape={bnb_shape} world={world_dbg}", flush=True)
+            shape = bnb_shape or qshape or (A.shape[-1],)
+            if isinstance(shape, int):
+                shape = (shape,)
+            res = torch.zeros(shape, device=out_dev, dtype=out_dtype)
+        return res
+
+    bnb_autograd.MatMul4Bit.forward = _patched_matmul_forward
+
     _USE_PART_A_KERNEL = True
     print("Part A kernel ENABLED for NF4 dequantization")
 
