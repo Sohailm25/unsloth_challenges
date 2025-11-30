@@ -69,6 +69,7 @@ def run(model_id: str = "Qwen/Qwen2-VL-2B-Instruct"):
         dtype=None,
         load_in_4bit=False,
         device_map="auto",
+        trust_remote_code=True,
     )
 
     base_dir = "/workspace/out_model"
