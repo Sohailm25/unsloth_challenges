@@ -862,15 +862,11 @@ def enable_part_a_kernel():
     bnb_F.dequantize_4bit = patched_dequantize_4bit
 
     # Patch MatMul4Bit to guard against None dequant output
-    _orig_matmul_forward = bnb_autograd.MatMul4Bit.forward
-
     def _patched_matmul_forward(ctx, A, B, out=None, bias=None, quant_state=None):
         out_dev = A.device
         out_dtype = A.dtype
-        # Call original dequant through our patched path
-        # (bnb_autograd calls F.dequantize_4bit internally; we intercept after)
-        res = _orig_matmul_forward(ctx, A, B, out, bias, quant_state)
-        if res is None:
+        deq = patched_dequantize_4bit(B, quant_state)
+        if deq is None:
             rank_dbg, world_dbg = _get_fsdp_rank_info()
             qshape = tuple(quant_state.shape) if hasattr(quant_state, "shape") else None
             bnb_shape = getattr(quant_state, "_bnb_ref_shape", None)
@@ -878,7 +874,9 @@ def enable_part_a_kernel():
             shape = bnb_shape or qshape or (A.shape[-1],)
             if isinstance(shape, int):
                 shape = (shape,)
-            res = torch.zeros(shape, device=out_dev, dtype=out_dtype)
+            deq = torch.zeros(shape, device=out_dev, dtype=out_dtype)
+        deq_t = deq.t()
+        res = torch.nn.functional.linear(A, deq_t, bias)
         return res
 
     bnb_autograd.MatMul4Bit.forward = _patched_matmul_forward
