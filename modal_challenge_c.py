@@ -581,6 +581,191 @@ def debug_flex_attention():
         print("\n*** Outputs are numerically similar ***")
 
 
+@app.function(
+    image=image,
+    gpu="A100",
+    timeout=1800,
+)
+def run_swa_test():
+    """
+    Test Sliding Window Attention (SWA) with flex_attention on A100.
+
+    This tests the SWA implementation with:
+    - Causal + sliding window masking
+    - Document boundary masking (for packing)
+    - Dynamic sequence lengths
+    """
+    import os
+    import sys
+    import math
+
+    sys.path.insert(0, "/workspace")
+    os.chdir("/workspace")
+
+    import torch
+    from torch.nn.attention.flex_attention import flex_attention, create_block_mask
+
+    print(f"PyTorch version: {torch.__version__}")
+    print(f"GPU: {torch.cuda.get_device_name(0)}")
+
+    # Test 1: Pure sliding window mask
+    print("\n=== Test 1: Pure Sliding Window Mask ===")
+    bsz, num_heads, seq_len, head_dim = 1, 32, 128, 64
+    dtype = torch.float16
+    window_size = 32
+
+    Q = torch.randn(bsz, num_heads, seq_len, head_dim, device="cuda", dtype=dtype)
+    K = torch.randn(bsz, num_heads, seq_len, head_dim, device="cuda", dtype=dtype)
+    V = torch.randn(bsz, num_heads, seq_len, head_dim, device="cuda", dtype=dtype)
+    scale = 1.0 / math.sqrt(head_dim)
+
+    # Create SWA + causal mask
+    def swa_causal_mask(window_size):
+        W = int(window_size)
+        def _mask(b, h, q_idx, kv_idx):
+            return (q_idx >= kv_idx) & ((q_idx - kv_idx) <= W)
+        return _mask
+
+    block_mask = create_block_mask(
+        swa_causal_mask(window_size),
+        B=bsz,
+        H=num_heads,
+        Q_LEN=seq_len,
+        KV_LEN=seq_len,
+        device="cuda",
+    )
+
+    swa_out = flex_attention(Q, K, V, block_mask=block_mask, scale=scale)
+    print(f"SWA output: min={swa_out.min():.4f}, max={swa_out.max():.4f}, mean={swa_out.mean():.4f}")
+    print(f"SWA has nan: {swa_out.isnan().any()}, has inf: {swa_out.isinf().any()}")
+
+    # Test 2: SWA + document boundary masking (packing)
+    print("\n=== Test 2: SWA + Document Boundary Masking ===")
+
+    # Simulate packed documents: [doc1: 0-40, doc2: 41-80, doc3: 81-127]
+    doc_ids = torch.zeros(bsz, seq_len, dtype=torch.int32, device="cuda")
+    doc_ids[0, 41:81] = 1
+    doc_ids[0, 81:] = 2
+
+    def swa_doc_mask(window_size, doc_ids):
+        W = int(window_size)
+        def _mask(b, h, q_idx, kv_idx):
+            causal = q_idx >= kv_idx
+            in_window = (q_idx - kv_idx) <= W
+            same_doc = doc_ids[b, q_idx] == doc_ids[b, kv_idx]
+            return causal & in_window & same_doc
+        return _mask
+
+    block_mask_doc = create_block_mask(
+        swa_doc_mask(window_size, doc_ids),
+        B=bsz,
+        H=num_heads,
+        Q_LEN=seq_len,
+        KV_LEN=seq_len,
+        device="cuda",
+    )
+
+    swa_doc_out = flex_attention(Q, K, V, block_mask=block_mask_doc, scale=scale)
+    print(f"SWA+doc output: min={swa_doc_out.min():.4f}, max={swa_doc_out.max():.4f}, mean={swa_doc_out.mean():.4f}")
+    print(f"SWA+doc has nan: {swa_doc_out.isnan().any()}, has inf: {swa_doc_out.isinf().any()}")
+
+    # Outputs should differ because of document boundary masking
+    diff = (swa_out - swa_doc_out).abs()
+    print(f"Difference from pure SWA: max={diff.max():.4f}, mean={diff.mean():.4f}")
+    print(f"Outputs differ (expected due to doc boundaries): {diff.max() > 0.01}")
+
+    # Test 3: Full model with SWA
+    print("\n=== Test 3: Full Model Training with SWA ===")
+
+    from challenges.challenge_c_solution import (
+        apply_all_patches,
+        prepare_peft_for_compile,
+        configure_sliding_window,
+        get_sliding_window_size,
+    )
+
+    # Configure SWA with window_size=512
+    swa_window = 512
+    apply_all_patches(use_flex_attention=True, use_part_a_kernel=True, sliding_window=swa_window)
+    print(f"Sliding window configured: {get_sliding_window_size()}")
+
+    from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+    from peft import get_peft_model, LoraConfig, TaskType
+    from datasets import load_dataset
+    from trl import SFTTrainer, SFTConfig
+
+    bnb_config = BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_use_double_quant=True,
+        bnb_4bit_quant_type="nf4",
+        bnb_4bit_compute_dtype=torch.float16,
+    )
+
+    model = AutoModelForCausalLM.from_pretrained(
+        "unsloth/Llama-3.2-1B-Instruct-bnb-4bit",
+        device_map="auto",
+        quantization_config=bnb_config,
+    )
+
+    tokenizer = AutoTokenizer.from_pretrained("unsloth/Llama-3.2-1B-Instruct-bnb-4bit")
+    tokenizer.padding_side = "right"
+
+    lora_config = LoraConfig(
+        r=32,
+        lora_alpha=64,
+        target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
+        lora_dropout=0,
+        bias="none",
+        task_type=TaskType.CAUSAL_LM,
+    )
+
+    model = get_peft_model(model, lora_config)
+    prepare_peft_for_compile(model)
+
+    with torch.no_grad():
+        for name, param in model.named_parameters():
+            if ".lora_A." in name or ".lora_B." in name:
+                param.requires_grad_(True)
+            else:
+                param.requires_grad_(False)
+
+    model.enable_input_require_grads()
+
+    url = "https://huggingface.co/datasets/laion/OIG/resolve/main/unified_chip2.jsonl"
+    dataset = load_dataset("json", data_files={"train": url}, split="train[:5%]")
+
+    training_args = SFTConfig(
+        per_device_train_batch_size=1,
+        gradient_accumulation_steps=2,
+        warmup_steps=1,
+        max_steps=10,
+        logging_steps=1,
+        output_dir="outputs_swa",
+        seed=3407,
+        max_length=1024,
+        packing=True,  # Enable packing to test document boundary masking
+        fp16=True,
+        report_to="none",
+        dataset_num_proc=4,
+    )
+
+    trainer = SFTTrainer(
+        model=model,
+        train_dataset=dataset,
+        processing_class=tokenizer,
+        args=training_args,
+    )
+
+    print("\n[SWA Test] Starting training with SWA + packing...")
+    trainer.train()
+
+    final_loss = trainer.state.log_history[-1].get("loss", "N/A")
+    print(f"\n[SWA Test] Training completed!")
+    print(f"[SWA Test] Final loss: {final_loss}")
+    print(f"[SWA Test] SWA window size: {swa_window}")
+    print(f"[SWA Test] Packing enabled: True")
+
+
 @app.local_entrypoint()
 def main(action: str = "check"):
     """
@@ -595,6 +780,7 @@ def main(action: str = "check"):
     - graph-a100: Test graph breaks on A100 with flex_attention
     - loss: Compare compiled vs non-compiled loss
     - debug-flex: Debug flex_attention vs SDPA on A100
+    - swa: Test sliding window attention on A100
     """
     if action == "check":
         check_environment.remote()
@@ -612,6 +798,8 @@ def main(action: str = "check"):
         run_loss_comparison.remote()
     elif action == "debug-flex":
         debug_flex_attention.remote()
+    elif action == "swa":
+        run_swa_test.remote()
     else:
         print(f"Unknown action: {action}")
-        print("Available actions: check, check-a100, train, train-a100, graph, graph-a100, loss, debug-flex")
+        print("Available actions: check, check-a100, train, train-a100, graph, graph-a100, loss, debug-flex, swa")
