@@ -21,6 +21,7 @@
 - Capability guard disables flash-attn on compute capability < 8; Flex masks permitted by LLaMA path; dtype handling covers fp16/bf16/fp8.
 - Tests: `tests/test_attention_backend_selection.py` and `tests/test_unified_attention_smoke.py` passing on CPU.
 - GPU validation: Modal A100 (torch 2.5.1+cu121 + flash-attn 2.8.3 cp310) selects `flash_attn_2` and passes smoke; log `runs/benchmarks/2025-11-30-ampere-flash-attn.log`. T4 falls back to SDPA/xformers (no FA wheels; FA gated off for SM75).
+- Additional guardrails: backend-selection tests ensure SM75 caps never pick flash and a stubbed FA2 path is callable; Oracle session `t4-flash-attn-plan` confirms FA2 is Ampere+ only and recommends documenting SM75 fallback.
 
 ## Environment
 - `.venv` Python 3.11.
