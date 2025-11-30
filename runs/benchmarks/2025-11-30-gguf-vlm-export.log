@@ -18,3 +18,10 @@ Modal GPU run of `modal_gguf_vlm_export.py::run` to validate GGUF export for `un
 Modal GPU attempt for `liuhaotian/llava-v1.6-mistral-7b` to broaden VLM coverage.
 - Outcome: Failed early because transformers==4.57.2 in the modal image does not support `model_type=llava_mistral`; FastVisionModel aborted before conversion. No artifacts produced.
 - Action left: rerun with newer transformers when modal base image is updated or pin a supported llava-v1.6 fork.
+
+## description of what was run, for what purpose
+Modal GPU run of `modal_gguf_vlm_export.py::run` for `Qwen/Qwen2-VL-7B-Instruct` to extend coverage to a larger Qwen2-VL model.
+- Environment: Modal A10G, torch 2.5.1+cu121, unsloth editable branch `gguf-vision-export`, unsloth_zoo==2025.11.5.
+- Actions: merged to 16-bit, patched converter (qwen2 vocab + clip-vision allowance), converted text + mmproj to GGUF, quantized text to q8_0.
+- Outputs: `Qwen2-VL-7B-Instruct.Q8_0.gguf` (~7.54 GB) and `Qwen2-VL-7B-Instruct.BF16-mmproj.gguf` (vision projector) produced successfully.
+- Notes: same benign warnings about missing `triton_kernels` and `causal_conv1d`; conversion finished end-to-end.
