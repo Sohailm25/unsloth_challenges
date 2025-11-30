@@ -1,0 +1,15 @@
+## description of what was run, for what purpose
+Modal GPU run of `modal_gguf_vlm_export.py::run` to validate GGUF export for Qwen2-VL-2B-Instruct (vision model) using local unsloth branch changes.
+- Environment: Modal A10G, torch 2.5.1+cu121, unsloth installed editable from branch `gguf-vision-export`, unsloth_zoo==2025.11.5.
+- Actions: downloaded model, merged to 16-bit, patched converter, converted text + mmproj to GGUF, quantized text to q8_0.
+- Outputs: `Qwen2-VL-2B-Instruct.Q8_0.gguf` (~1.53 GB) and `Qwen2-VL-2B-Instruct.BF16-mmproj.gguf` (full-precision vision projector).
+- Notes: build emitted warnings about missing `triton_kernels` and `causal_conv1d` compilation; conversion completed successfully with both GGUF artifacts produced.
+
+---
+
+## description of what was run, for what purpose
+Modal GPU run of `modal_gguf_vlm_export.py::run` to validate GGUF export for `unsloth/llava-1.5-7b-hf` after allowing CLIP vision encoders in converter.
+- Environment: Modal A10G, torch 2.5.1+cu121, unsloth editable branch `gguf-vision-export`, unsloth_zoo==2025.11.5.
+- Actions: merged to 16-bit, patched converter (qwen2 vocab + Llava clip vision), converted text + mmproj to GGUF, quantized text to q8_0.
+- Outputs: `llava-1.5-7b-hf.Q8_0.gguf` (~6.7 GB) and `llava-1.5-7b-hf.BF16-mmproj.gguf` (~622 MB) produced successfully.
+- Notes: same non-blocking warnings about missing `triton_kernels` and `causal_conv1d`; conversion succeeded end-to-end.
