@@ -860,6 +860,7 @@ def enable_part_a_kernel():
     global _ORIGINAL_BNB_DEQUANT, _USE_PART_A_KERNEL
     import bitsandbytes.functional as bnb_F
     import bitsandbytes.autograd._functions as bnb_autograd
+    _bnb_shape_helper = _ensure_bnb_shape_cached
 
     if _ORIGINAL_BNB_DEQUANT is None:
         _ORIGINAL_BNB_DEQUANT = bnb_F.dequantize_4bit
@@ -872,7 +873,7 @@ def enable_part_a_kernel():
         out_dtype = A.dtype
         bnb_shape = getattr(quant_state, "_bnb_ref_shape", None)
         if bnb_shape is None:
-            bnb_shape = _ensure_bnb_shape_cached(B, quant_state)
+            bnb_shape = _bnb_shape_helper(B, quant_state)
             if bnb_shape is not None:
                 setattr(quant_state, "_bnb_ref_shape", bnb_shape)
         deq = patched_dequantize_4bit(B, quant_state)
