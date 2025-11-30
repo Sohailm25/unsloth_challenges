@@ -30,3 +30,15 @@ Modal GPU run of `modal_gguf_vlm_export.py::run` for `Qwen/Qwen2-VL-7B-Instruct`
 - Actions: merged to 16-bit, patched converter (qwen2 vocab + clip-vision allowance), converted text + mmproj to GGUF, quantized text to q8_0.
 - Outputs: `Qwen2-VL-7B-Instruct.Q8_0.gguf` (~7.54 GB) and `Qwen2-VL-7B-Instruct.BF16-mmproj.gguf` (vision projector) produced successfully.
 - Notes: same benign warnings about missing `triton_kernels` and `causal_conv1d`; conversion finished end-to-end.
+
+## description of what was run, for what purpose
+Modal GPU attempt of `modal_gguf_vlm_export.py::run` for `Qwen/Qwen-VL` (original Qwen-VL) to validate GGUF export after adding VLM patches.
+- Environment: Modal A10G, torch 2.5.1+cu121, unsloth editable (with gguf_vlm_helpers + BeamSearchScorer alias), unsloth_zoo==2025.11.5.
+- Outcome: Downloaded config and Python modules; failed early because `transformers_stream_generator` imported `BeamSearchScorer` from transformers top-level (missing in 4.57.2). Run aborted before weight loading (app ap-cc6PqO99oR187yCUUa2Sgp).
+- Action item: provide BeamSearchScorer alias; rerun.
+
+## description of what was run, for what purpose
+Modal GPU re-attempt for `Qwen/Qwen-VL` after adding BeamSearchScorer alias in `unsloth/models/vision.py`.
+- Environment: Modal A10G, torch 2.5.1+cu121, unsloth editable (BeamSearchScorer alias), unsloth_zoo==2025.11.5.
+- Outcome: Model download proceeded; load failed when transformers enforced torch>=2.6 for loading PyTorch `.bin` shards (CVE-2025-32434 safeguard) with torch 2.5.1. No GGUF artifacts produced (app ap-vLy60C02VeUOj8KCABUPbS).
+- Action left: either upgrade modal image to torch>=2.6-compatible stack or locate a safetensors variant of Qwen-VL; current image pinned to torch 2.5.1 for other successful runs.

@@ -1,17 +1,27 @@
 # Current State (2025-11-30)
 
 ## Today
-- Added GGUF converter patch to allow CLIP/SigLIP vision encoders during mmproj export; updated tests.
-- Validated GGUF export on Modal A10G for Qwen2-VL-2B-Instruct and Llava-1.5-7B (text + mmproj produced, q8_0 text quant).
+- Added BeamSearchScorer alias in `unsloth/models/vision.py` so Qwen-VL remote code importing from transformers top-level can load.
+- Split Qwen-VL (v1) vs Qwen2-VL handling in `gguf_vlm_helpers`; updated helper tests and kept CLIP/SigLIP vision allowance.
+- Modal `Qwen/Qwen-VL` attempt: BeamSearch fixed, but load fails because transformers blocks torch<2.6 for `.bin` shards (torch 2.5.1 in image). Logged in `runs/benchmarks/2025-11-30-gguf-vlm-export.log`.
+- Pytest `tests/saving/vision_models/test_vlm_gguf_helpers.py` (unsloth repo) passing.
+
+## GGUF Vision Export
+- Working conversions on Modal A10G: `unsloth/llava-1.5-7b-hf`, `Qwen/Qwen2-VL-2B-Instruct`, `Qwen/Qwen2-VL-7B-Instruct` → text `Q8_0.gguf` + `BF16-mmproj.gguf` via `modal_gguf_vlm_export.py`.
+- Converter patches: trust_remote_code tokenizer load for Qwen2-VL, relaxed vision type checks for Llava CLIP/SigLIP encoders, VLM config patching/restoration.
+- Outstanding blockers: `liuhaotian/llava-v1.6-mistral-7b` unsupported by transformers 4.57.2; `Qwen/Qwen-VL` requires torch>=2.6 to load `.bin` shards (no safetensors variant found).
 
 ## Branch Info
-- Branch: gguf-vision-export (root) with unsloth submodule on attention-unify-interface.
-- Active bd issue: `unsloth-challenges-x5t` (GGUF vision export); status in progress.
+- Root branch: bench/part-a-bnb.
+- `unsloth/` nested repo branch: attention-unify-interface.
+- Active bd issues:
+  - `unsloth-challenges-r7m` (FSDPA scatter None bug) status in_progress.
+  - `unsloth-challenges-vhz` (Qwen-VL GGUF export blocked by torch<2.6) status in_progress.
 
 ## Environment
-- `.venv` Py3.11
-- Challenge A Modal image: torch 2.3.1 / triton 2.3.1 / bitsandbytes 0.43.1 / transformers ≥4.41 / peft ≥0.11 / trl <0.9
-- Challenge C Modal image: torch 2.5.1 / triton 3.0+ / bitsandbytes 0.48.2 / transformers 4.57+ / peft 0.13+ / trl 0.12+
+- `.venv` Python 3.11.
+- Modal gguf-vlm image: torch 2.5.1+cu121, transformers 4.57.2, unsloth_zoo 2025.11.5, bitsandbytes, transformers_stream_generator, einops.
+- Challenge C Modal image: torch 2.9.1+cu126, bitsandbytes 0.48.2, transformers 4.57+, peft 0.13+.
 
 ---
 
@@ -102,7 +112,7 @@
 **Files:**
 - `challenge_b_train.py` - Training script with FSDP2 + torch.compile
 - `challenge_b_train_with_part_a.py` - Training script with Part A kernel integration
-- `modal_challenge_b.py` - Modal harness with `--fsdp2 --compile --part-a` flags (see `runs/benchmarks/` logs)
+- `modal_challenge_b.py` - Modal entrypoint with `--fsdp2 --compile --part-a` flags (see `runs/benchmarks/` logs)
 - `kaggle_challenge_b_fsdp2_qlora.py` - Kaggle-ready Python script
 - `notebooks/kaggle_challenge_b_fsdp2_qlora.ipynb` - Kaggle notebook
 
