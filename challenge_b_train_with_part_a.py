@@ -875,8 +875,17 @@ def enable_part_a_kernel():
             if isinstance(shape, int):
                 shape = (shape,)
             deq = torch.zeros(shape, device=out_dev, dtype=out_dtype)
-        deq_t = deq.t()
-        res = torch.nn.functional.linear(A, deq_t, bias)
+        # Choose orientation to match A.shape[-1]
+        if deq.shape[-1] == A.shape[-1]:
+            weight = deq
+        elif deq.shape[0] == A.shape[-1]:
+            weight = deq.t().contiguous()
+        else:
+            # Fallback: try transpose and log
+            rank_dbg, world_dbg = _get_fsdp_rank_info()
+            print(f"[MatMul4Bit ORIENT rank={rank_dbg}] A_last={A.shape[-1]} deq.shape={tuple(deq.shape)} world={world_dbg}", flush=True)
+            weight = deq.t().contiguous()
+        res = torch.nn.functional.linear(A, weight, bias)
         return res
 
     bnb_autograd.MatMul4Bit.forward = _patched_matmul_forward
