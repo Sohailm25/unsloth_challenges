@@ -1,0 +1,716 @@
+## description of what was run, for what purpose
+Part A scatter-only after weight orientation fix; reacquire off, gather off, scatter on; cache off; max_steps=5.
+Command: modal run modal_challenge_b.py::run_part_a_kernel_training --use-part-a --no-use-torch-compile --max-steps 5 --disable-reacquire --disable-gather
+
+✓ Initialized. View run at 
+https://modal.com/apps/sohailm25/main/ap-YRNtTedrBEyitdrnMFZJN8
+✓ Created objects.
+├── 🔨 Created mount /Volumes/Extreme 
+│   Pro/unsloth-challenges/modal_challenge_b.py
+├── 🔨 Created mount challenge_b_train_with_part_a.py
+├── 🔨 Created mount challenge_b_train.py
+├── 🔨 Created mount /Volumes/Extreme Pro/unsloth-challenges/challenges
+├── 🔨 Created function run_fsdp_training.
+├── 🔨 Created function run_single_gpu_baseline.
+├── 🔨 Created function test_fsdp2_setup.
+└── 🔨 Created function run_part_a_kernel_training.
+============================================================
+FSDP2 + QLoRA + Part A kernel Training
+============================================================
+CUDA available: True
+GPU count: 2
+  GPU 0: Tesla T4
+  GPU 1: Tesla T4
+Part A env toggles: | reacquire=off | gather=off | scatter=on | gather_cache=off
+
+Running command: accelerate launch --config_file /tmp/fsdp_config.yaml /workspace/challenge_b_train_with_part_a.py --max_steps 5 --use_gradient_checkpointing --use_part_a_kernel
+
+PyTorch version: 2.9.1+cu128
+CUDA available: True
+PyTorch version: 2.9.1+cu128CUDA device count: 2
+
+CUDA available: True  GPU 0: Tesla T4
+
+CUDA device count: 2  GPU 1: Tesla T4
+
+  GPU 0: Tesla T4
+  GPU 1: Tesla T4
+============================================================
+Running FSDP2 + QLoRA  + Part A kernel DISTRIBUTED TRAINING
+============================================================
+============================================================
+Running FSDP2 + QLoRA  + Part A kernel DISTRIBUTED TRAINING
+============================================================
+[W1130 00:23:55.752672444 Utils.hpp:137] Warning: Environment variable NCCL_ASYNC_ERROR_HANDLING is deprecated; use TORCH_NCCL_ASYNC_ERROR_HANDLING instead (function operator())
+[W1130 00:23:55.752823705 Utils.hpp:137] Warning: Environment variable NCCL_ASYNC_ERROR_HANDLING is deprecated; use TORCH_NCCL_ASYNC_ERROR_HANDLING instead (function operator())
+[Gloo] Rank 1 is connected to 1 peer ranks. Expected number of connected peer ranks is : 1
+[Gloo] Rank 0 is connected to 1 peer ranks. Expected number of connected peer ranks is : 1
+Detected kernel version 4.4.0, which is below the recommended minimum of 5.5.0; this can cause the process to hang. It is recommended to upgrade the kernel to the minimum version or higher.
+World size: 2
+Local rank: 0
+Device: cuda:0
+Part A kernel ENABLED for NF4 dequantizationPart A kernel ENABLED for NF4 dequantization
+
+Loading model: meta-llama/Llama-3.1-8B-Instruct
+`torch_dtype` is deprecated! Use `dtype` instead!
+`torch_dtype` is deprecated! Use `dtype` instead!
+
+[1ALoading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]
+[1ALoading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]
+[1ALoading checkpoint shards:  25%|██▌       | 1/4 [00:06<00:20,  6.79s/it]
+[1ALoading checkpoint shards:  25%|██▌       | 1/4 [00:07<00:21,  7.06s/it]
+[1ALoading checkpoint shards:  50%|█████     | 2/4 [00:14<00:14,  7.11s/it]
+[1ALoading checkpoint shards:  50%|█████     | 2/4 [00:14<00:14,  7.33s/it]
+[1ALoading checkpoint shards:  75%|███████▌  | 3/4 [00:21<00:07,  7.08s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:21<00:00,  4.56s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:21<00:00,  5.47s/it]
+
+[1ALoading checkpoint shards:  75%|███████▌  | 3/4 [00:22<00:07,  7.58s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:23<00:00,  4.86s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:23<00:00,  5.79s/it]
+
+[1AGenerating train split: 0 examples [00:00, ? examples/s]
+[1AGenerating train split: 69218 examples [00:00, 440653.29 examples/s]
+[1AGenerating train split: 138362 examples [00:00, 463442.95 examples/s]Generating train split: 210289 examples [00:00, 500238.30 examples/s]Generating train split: 210289 examples [00:00, 486931.48 examples/s]
+
+[1AAdding EOS to train dataset (num_proc=4):   0%|          | 0/21029 [00:00<?, ? examples/s]
+[1AAdding EOS to train dataset (num_proc=4):   3%|▎         | 618/21029 [00:00<00:26, 772.48 examples/s]
+[1AAdding EOS to train dataset (num_proc=4):  12%|█▏        | 2529/21029 [00:01<00:09, 1937.13 examples/s]
+[1AAdding EOS to train dataset (num_proc=4):  33%|███▎      | 6956/21029 [00:01<00:02, 6407.01 examples/s]
+[1AAdding EOS to train dataset (num_proc=4):  78%|███████▊  | 16409/21029 [00:01<00:00, 17915.70 examples/s]Adding EOS to train dataset (num_proc=4): 100%|██████████| 21029/21029 [00:01<00:00, 11394.35 examples/s]
+
+[1ATokenizing train dataset (num_proc=4):   0%|          | 0/21029 [00:00<?, ? examples/s]
+[1ATokenizing train dataset (num_proc=4):   0%|          | 55/21029 [00:02<16:13, 21.53 examples/s]
+[1ATokenizing train dataset (num_proc=4):   1%|          | 218/21029 [00:02<03:48, 90.91 examples/s]
+[1ATokenizing train dataset (num_proc=4):   2%|▏         | 404/21029 [00:03<01:51, 185.02 examples/s]
+[1ATokenizing train dataset (num_proc=4):   3%|▎         | 649/21029 [00:03<00:57, 352.46 examples/s]
+[1ATokenizing train dataset (num_proc=4):   5%|▌         | 1155/21029 [00:03<00:25, 771.94 examples/s]
+[1ATokenizing train dataset (num_proc=4):   6%|▋         | 1362/21029 [00:03<00:21, 919.58 examples/s]
+[1ATokenizing train dataset (num_proc=4):   9%|▊         | 1826/21029 [00:03<00:13, 1447.47 examples/s]
+[1ATokenizing train dataset (num_proc=4):  11%|█         | 2343/21029 [00:03<00:09, 2073.02 examples/s]
+[1ATokenizing train dataset (num_proc=4):  14%|█▎        | 2840/21029 [00:03<00:06, 2633.01 examples/s]
+[1ATokenizing train dataset (num_proc=4):  16%|█▌        | 3290/21029 [00:03<00:06, 2900.26 examples/s]
+[1ATokenizing train dataset (num_proc=4):  19%|█▉        | 4019/21029 [00:04<00:04, 3895.51 examples/s]
+[1ATokenizing train dataset (num_proc=4):  23%|██▎       | 4859/21029 [00:04<00:03, 5000.42 examples/s]
+[1ATokenizing train dataset (num_proc=4):  28%|██▊       | 5873/21029 [00:04<00:02, 6325.57 examples/s]
+[1ATokenizing train dataset (num_proc=4):  32%|███▏      | 6740/21029 [00:04<00:02, 6622.71 examples/s]
+[1ATokenizing train dataset (num_proc=4):  37%|███▋      | 7729/21029 [00:04<00:01, 7380.56 examples/s]
+[1ATokenizing train dataset (num_proc=4):  41%|████▏     | 8680/21029 [00:04<00:01, 7960.01 examples/s]
+[1ATokenizing train dataset (num_proc=4):  46%|████▌     | 9718/21029 [00:04<00:01, 8627.61 examples/s]
+[1ATokenizing train dataset (num_proc=4):  51%|█████     | 10713/21029 [00:04<00:01, 8910.39 examples/s]
+[1ATokenizing train dataset (num_proc=4):  55%|█████▌    | 11640/21029 [00:04<00:01, 8829.00 examples/s]
+[1ATokenizing train dataset (num_proc=4):  60%|██████    | 12632/21029 [00:05<00:00, 9136.66 examples/s]
+[1ATokenizing train dataset (num_proc=4):  65%|██████▌   | 13688/21029 [00:05<00:00, 9540.62 examples/s]
+[1ATokenizing train dataset (num_proc=4):  70%|██████▉   | 14681/21029 [00:05<00:00, 9389.90 examples/s]
+[1ATokenizing train dataset (num_proc=4):  75%|███████▍  | 15739/21029 [00:05<00:00, 9142.16 examples/s]
+[1ATokenizing train dataset (num_proc=4):  80%|███████▉  | 16725/21029 [00:05<00:00, 8915.33 examples/s]
+[1ATokenizing train dataset (num_proc=4):  84%|████████▍ | 17647/21029 [00:05<00:00, 8221.65 examples/s]
+[1ATokenizing train dataset (num_proc=4):  88%|████████▊ | 18595/21029 [00:05<00:00, 7965.48 examples/s]
+[1ATokenizing train dataset (num_proc=4):  93%|█████████▎| 19460/21029 [00:05<00:00, 7387.24 examples/s]
+[1ATokenizing train dataset (num_proc=4):  96%|█████████▋| 20279/21029 [00:06<00:00, 6079.48 examples/s]
+[1ATokenizing train dataset (num_proc=4): 100%|█████████▉| 21021/21029 [00:06<00:00, 5023.60 examples/s]Tokenizing train dataset (num_proc=4): 100%|██████████| 21029/21029 [00:06<00:00, 3252.84 examples/s]
+
+[1ATruncating train dataset (num_proc=4):   0%|          | 0/21029 [00:00<?, ? examples/s]
+[1ATruncating train dataset (num_proc=4):  25%|██▍       | 5257/21029 [00:01<00:03, 4509.97 examples/s]
+[1ATruncating train dataset (num_proc=4):  75%|███████▌  | 15772/21029 [00:01<00:00, 10330.36 examples/s]Truncating train dataset (num_proc=4): 100%|██████████| 21029/21029 [00:01<00:00, 11423.59 examples/s]
+Detected kernel version 4.4.0, which is below the recommended minimum of 5.5.0; this can cause the process to hang. It is recommended to upgrade the kernel to the minimum version or higher.
+Trainable params: 167,772,160 (5.66%)
+Starting FSDP2 training...
+The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'eos_token_id': 128009, 'pad_token_id': 128009}.
+The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'eos_token_id': 128009, 'pad_token_id': 128009}.
+/usr/local/lib/python3.11/site-packages/accelerate/utils/fsdp_utils.py:715: UserWarning: FSDP upcast of low precision parameters to fp32 (since mixed_precision != 'no') may affect the precision of model checkpoints.
+  warnings.warn(
+
+[1A  0%|          | 0/5 [00:00<?, ?it/s]/usr/local/lib/python3.11/site-packages/torch/_dynamo/eval_frame.py:1044: UserWarning: torch.utils.checkpoint: the use_reentrant parameter should be passed explicitly. Starting in PyTorch 2.9, calling checkpoint without use_reentrant will raise an exception. use_reentrant=False is recommended, but if you need to preserve the current default behavior, you can pass use_reentrant=True. Refer to docs for more details on the differences between the two variants.
+  return fn(*args, **kwargs)
+/usr/local/lib/python3.11/site-packages/torch/_dynamo/eval_frame.py:1044: UserWarning: torch.utils.checkpoint: the use_reentrant parameter should be passed explicitly. Starting in PyTorch 2.9, calling checkpoint without use_reentrant will raise an exception. use_reentrant=False is recommended, but if you need to preserve the current default behavior, you can pass use_reentrant=True. Refer to docs for more details on the differences between the two variants.
+  return fn(*args, **kwargs)
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+
+[MatMul4Bit NONE rank=0] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2[MatMul4Bit NONE rank=0] qshape=(4096, 14336) bnb_shape=None world=2
+
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(1024, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 4096) bnb_shape=None world=2[MatMul4Bit NONE rank=0] qshape=(4096, 4096) bnb_shape=None world=2
+
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(14336, 4096) bnb_shape=None world=2
+[MatMul4Bit NONE rank=1] qshape=(4096, 14336) bnb_shape=None world=2
+[MatMul4Bit NONE rank=0] qshape=(4096, 14336) bnb_shape=None world=2
+[rank1]: Traceback (most recent call last):
+[rank1]:   File "/workspace/challenge_b_train_with_part_a.py", line 1148, in <module>
+[rank1]:     main()
+[rank1]:   File "/workspace/challenge_b_train_with_part_a.py", line 1144, in main
+[rank1]:     run_fsdp2_training(args)
+[rank1]:   File "/workspace/challenge_b_train_with_part_a.py", line 1060, in run_fsdp2_training
+[rank1]:     train_result = trainer.train()
+[rank1]:                    ^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.11/site-packages/transformers/trainer.py", line 2325, in train
+[rank1]:     return inner_training_loop(
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.11/site-packages/transformers/trainer.py", line 2674, in _inner_training_loop
+[rank1]:     tr_loss_step = self.training_step(model, inputs, num_items_in_batch)
+[rank1]:                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.11/site-packages/trl/trainer/sft_trainer.py", line 1190, in training_step
+[rank1]:     return super().training_step(*args, **kwargs)
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.11/site-packages/transformers/trainer.py", line 4071, in training_step
+[rank1]:     self.accelerator.backward(loss, **kwargs)
+[rank1]:   File "/usr/local/lib/python3.11/site-packages/accelerate/accelerator.py", line 2848, in backward
+[rank1]:     self.scaler.scale(loss).backward(**kwargs)
+[rank1]:   File "/usr/local/lib/python3.11/site-packages/torch/_tensor.py", line 625, in backward
+[rank1]:     torch.autograd.backward(
+[rank1]:   File "/usr/local/lib/python3.11/site-packages/torch/autograd/__init__.py", line 354, in backward
+[rank1]:     _engine_run_backward(
+[rank1]:   File "/usr/local/lib/python3.11/site-packages/torch/autograd/graph.py", line 841, in _engine_run_backward
+[rank1]:     return Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.11/site-packages/torch/autograd/function.py", line 315, in apply
+[rank1]:     return user_fn(self, *args)
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.11/site-packages/torch/utils/checkpoint.py", line 319, in backward
+[rank1]:     torch.autograd.backward(outputs_with_grad, args_with_grad)
+[rank1]:   File "/usr/local/lib/python3.11/site-packages/torch/autograd/__init__.py", line 354, in backward
+[rank1]:     _engine_run_backward(
+[rank1]:   File "/usr/local/lib/python3.11/site-packages/torch/autograd/graph.py", line 841, in _engine_run_backward
+[rank1]:     return Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.11/site-packages/torch/autograd/function.py", line 315, in apply
+[rank1]:     return user_fn(self, *args)
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.11/site-packages/bitsandbytes/autograd/_functions.py", line 388, in backward
+[rank1]:     if ctx.is_empty:
+[rank1]:        ^^^^^^^^^^^^
+[rank1]: AttributeError: 'MatMul4BitBackward' object has no attribute 'is_empty'
+[rank0]: Traceback (most recent call last):
+[rank0]:   File "/workspace/challenge_b_train_with_part_a.py", line 1148, in <module>
+[rank0]:     main()
+[rank0]:   File "/workspace/challenge_b_train_with_part_a.py", line 1144, in main
+[rank0]:     run_fsdp2_training(args)
+[rank0]:   File "/workspace/challenge_b_train_with_part_a.py", line 1060, in run_fsdp2_training
+[rank0]:     train_result = trainer.train()
+[rank0]:                    ^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.11/site-packages/transformers/trainer.py", line 2325, in train
+[rank0]:     return inner_training_loop(
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.11/site-packages/transformers/trainer.py", line 2674, in _inner_training_loop
+[rank0]:     tr_loss_step = self.training_step(model, inputs, num_items_in_batch)
+[rank0]:                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.11/site-packages/trl/trainer/sft_trainer.py", line 1190, in training_step
+[rank0]:     return super().training_step(*args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.11/site-packages/transformers/trainer.py", line 4071, in training_step
+[rank0]:     self.accelerator.backward(loss, **kwargs)
+[rank0]:   File "/usr/local/lib/python3.11/site-packages/accelerate/accelerator.py", line 2848, in backward
+[rank0]:     self.scaler.scale(loss).backward(**kwargs)
+[rank0]:   File "/usr/local/lib/python3.11/site-packages/torch/_tensor.py", line 625, in backward
+[rank0]:     torch.autograd.backward(
+[rank0]:   File "/usr/local/lib/python3.11/site-packages/torch/autograd/__init__.py", line 354, in backward
+[rank0]:     _engine_run_backward(
+[rank0]:   File "/usr/local/lib/python3.11/site-packages/torch/autograd/graph.py", line 841, in _engine_run_backward
+[rank0]:     return Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.11/site-packages/torch/autograd/function.py", line 315, in apply
+[rank0]:     return user_fn(self, *args)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.11/site-packages/torch/utils/checkpoint.py", line 319, in backward
+[rank0]:     torch.autograd.backward(outputs_with_grad, args_with_grad)
+[rank0]:   File "/usr/local/lib/python3.11/site-packages/torch/autograd/__init__.py", line 354, in backward
+[rank0]:     _engine_run_backward(
+[rank0]:   File "/usr/local/lib/python3.11/site-packages/torch/autograd/graph.py", line 841, in _engine_run_backward
+[rank0]:     return Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.11/site-packages/torch/autograd/function.py", line 315, in apply
+[rank0]:     return user_fn(self, *args)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.11/site-packages/bitsandbytes/autograd/_functions.py", line 388, in backward
+[rank0]:     if ctx.is_empty:
+[rank0]:        ^^^^^^^^^^^^
+[rank0]: AttributeError: 'MatMul4BitBackward' object has no attribute 'is_empty'
+  0%|          | 0/5 [00:04<?, ?it/s]
+[rank1]:[W1130 00:26:09.871386194 AllocatorConfig.cpp:28] Warning: PYTORCH_CUDA_ALLOC_CONF is deprecated, use PYTORCH_ALLOC_CONF instead (function operator())
+[rank0]:[W1130 00:26:09.177777626 AllocatorConfig.cpp:28] Warning: PYTORCH_CUDA_ALLOC_CONF is deprecated, use PYTORCH_ALLOC_CONF instead (function operator())
+W1130 00:26:11.693000 6 site-packages/torch/distributed/elastic/multiprocessing/api.py:908] Sending process 12 closing signal SIGTERM
+E1130 00:26:12.369000 6 site-packages/torch/distributed/elastic/multiprocessing/api.py:882] failed (exitcode: 1) local_rank: 1 (pid: 13) of binary: /usr/local/bin/python
+Traceback (most recent call last):
+  File "/usr/local/bin/accelerate", line 7, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/accelerate/commands/accelerate_cli.py", line 50, in main
+    args.func(args)
+  File "/usr/local/lib/python3.11/site-packages/accelerate/commands/launch.py", line 1268, in launch_command
+    multi_gpu_launcher(args)
+  File "/usr/local/lib/python3.11/site-packages/accelerate/commands/launch.py", line 899, in multi_gpu_launcher
+    distrib_run.run(args)
+  File "/usr/local/lib/python3.11/site-packages/torch/distributed/run.py", line 927, in run
+    elastic_launch(
+  File "/usr/local/lib/python3.11/site-packages/torch/distributed/launcher/api.py", line 156, in __call__
+    return launch_agent(self._config, self._entrypoint, list(args))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/torch/distributed/launcher/api.py", line 293, in launch_agent
+    raise ChildFailedError(
+torch.distributed.elastic.multiprocessing.errors.ChildFailedError: 
+============================================================
+/workspace/challenge_b_train_with_part_a.py FAILED
+------------------------------------------------------------
+Failures:
+  <NO_OTHER_FAILURES>
+------------------------------------------------------------
+Root Cause (first observed failure):
+[0]:
+  time      : 2025-11-30_00:26:11
+  host      : localhost
+  rank      : 1 (local_rank: 1)
+  exitcode  : 1 (pid: 13)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+============================================================
+Stopping app - local entrypoint completed.
+✓ App completed. View run at 
+https://modal.com/apps/sohailm25/main/ap-YRNtTedrBEyitdrnMFZJN8
