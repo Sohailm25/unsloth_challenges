@@ -13,3 +13,8 @@ Modal GPU run of `modal_gguf_vlm_export.py::run` to validate GGUF export for `un
 - Actions: merged to 16-bit, patched converter (qwen2 vocab + Llava clip vision), converted text + mmproj to GGUF, quantized text to q8_0.
 - Outputs: `llava-1.5-7b-hf.Q8_0.gguf` (~6.7 GB) and `llava-1.5-7b-hf.BF16-mmproj.gguf` (~622 MB) produced successfully.
 - Notes: same non-blocking warnings about missing `triton_kernels` and `causal_conv1d`; conversion succeeded end-to-end.
+
+## description of what was run, for what purpose
+Modal GPU attempt for `liuhaotian/llava-v1.6-mistral-7b` to broaden VLM coverage.
+- Outcome: Failed early because transformers==4.57.2 in the modal image does not support `model_type=llava_mistral`; FastVisionModel aborted before conversion. No artifacts produced.
+- Action left: rerun with newer transformers when modal base image is updated or pin a supported llava-v1.6 fork.
