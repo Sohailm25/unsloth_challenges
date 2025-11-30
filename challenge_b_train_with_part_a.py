@@ -871,6 +871,10 @@ def enable_part_a_kernel():
         out_dev = A.device
         out_dtype = A.dtype
         bnb_shape = getattr(quant_state, "_bnb_ref_shape", None)
+        if bnb_shape is None:
+            bnb_shape = _ensure_bnb_shape_cached(B, quant_state)
+            if bnb_shape is not None:
+                setattr(quant_state, "_bnb_ref_shape", bnb_shape)
         deq = patched_dequantize_4bit(B, quant_state)
         if deq is None:
             rank_dbg, world_dbg = _get_fsdp_rank_info()
