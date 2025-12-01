@@ -898,6 +898,10 @@ def enable_part_a_kernel():
     if _ORIGINAL_BNB_DEQUANT is None:
         _ORIGINAL_BNB_DEQUANT = bnb_F.dequantize_4bit
 
+
+    if _ORIGINAL_BNB_DEQUANT is None:
+        _ORIGINAL_BNB_DEQUANT = bnb_F.dequantize_4bit
+
     bnb_F.dequantize_4bit = patched_dequantize_4bit
 
     def _patched_matmul_forward(ctx, A, B, out=None, bias=None, quant_state=None):
@@ -924,10 +928,6 @@ def enable_part_a_kernel():
             full_shape,
             tuple(local_shape) if isinstance(local_shape, (tuple, list)) else None,
         )
-        if dist.is_initialized() and world_size > 1:
-            axis_tensor = torch.tensor([{-1: -1, "row": 0, "col": 1}.get(shard_axis, -1)], device=A.device, dtype=torch.int64)
-            dist.broadcast(axis_tensor, src=0)
-            shard_axis = {0: "row", 1: "col", -1: None}.get(int(axis_tensor.item()), shard_axis)
 
         local_out = torch.nn.functional.linear(A, weight, bias)
 
@@ -943,7 +943,6 @@ def enable_part_a_kernel():
         ctx.should_gather = dist.is_initialized() and ctx.world_size > 1 and is_sharded and shard_axis != "col"
         ctx.slice_rows = ctx.local_rows
         ctx.rows_sizes = None
-        ctx.total_rows = None
 
         if hasattr(ctx, "save_for_backward"):
             ctx.save_for_backward(weight)
@@ -963,22 +962,6 @@ def enable_part_a_kernel():
         max_rows = int(torch.stack(rows_list).max().item())
         total_rows = int(torch.stack(rows_list).sum().item())
         ctx.rows_sizes = [int(x.item()) for x in rows_list]
-        ctx.total_rows = total_rows
-
-        # Also equalize batch dimension to avoid numel mismatches
-        batch_dim = local_out.dim() - 1
-        batch_size = local_out.shape[batch_dim]
-        batch_tensor = torch.tensor([batch_size], device=local_out.device, dtype=torch.int64)
-        batch_list = [torch.zeros_like(batch_tensor) for _ in range(ctx.world_size)]
-        dist.all_gather(batch_list, batch_tensor)
-        max_batch = int(torch.stack(batch_list).max().item())
-
-        if batch_size < max_batch:
-            pad_shape = list(local_out.shape)
-            pad_shape[batch_dim] = max_batch - batch_size
-            pad_tensor = torch.zeros(pad_shape, device=local_out.device, dtype=local_out.dtype)
-            local_out = torch.cat([local_out, pad_tensor], dim=batch_dim)
-
         if ctx.local_rows < max_rows:
             pad_rows = max_rows - ctx.local_rows
             weight = torch.nn.functional.pad(weight, (0, 0, 0, pad_rows))
@@ -990,15 +973,6 @@ def enable_part_a_kernel():
             )
         ctx.slice_rows = max_rows
 
-        # After padding, numel must match
-        send_elems = torch.tensor([local_out.numel()], device=local_out.device, dtype=torch.int64)
-        send_elems_list = [torch.zeros_like(send_elems) for _ in range(ctx.world_size)]
-        dist.all_gather(send_elems_list, send_elems)
-        if max(send_e.item() for send_e in send_elems_list) != min(send_e.item() for send_e in send_elems_list):
-            if rank == 0:
-                print(f"[PARTA DEBUG] row-gather numel mismatch after pad per rank: {[int(x.item()) for x in send_elems_list]} batch_sizes={[int(x.item()) for x in batch_list]} rows_sizes={ctx.rows_sizes} max_batch={max_batch} max_rows={max_rows}", flush=True)
-            raise RuntimeError("Row gather numel mismatch across ranks after pad")
-
         if hasattr(ctx, "save_for_backward"):
             ctx.save_for_backward(weight)
         else:
@@ -1007,11 +981,13 @@ def enable_part_a_kernel():
         gathered = [torch.empty_like(local_out) for _ in range(ctx.world_size)]
         dist.all_gather(gathered, local_out)
         out_full = torch.cat(gathered, dim=-1)
-        target_cols = total_rows if total_rows > 0 else ctx.full_rows
+        target_cols = None
+        if total_rows > 0:
+            target_cols = total_rows
+        if target_cols is None and ctx.full_rows is not None:
+            target_cols = ctx.full_rows
         if target_cols is not None and out_full.shape[-1] > target_cols:
             out_full = out_full[..., : target_cols]
-        if _DEBUG_PARTA and rank == 0:
-            print(f"[PARTA DEBUG] fwd row-gather axis=row total_rows={total_rows} full_rows={ctx.full_rows} local_rows={ctx.local_rows} shard_axis={shard_axis} out_full_shape={tuple(out_full.shape)} rows_sizes={ctx.rows_sizes}", flush=True)
         return out_full
 
     def _patched_matmul_backward(ctx, grad_output):
@@ -1021,7 +997,6 @@ def enable_part_a_kernel():
             (weight,) = getattr(ctx, "_saved_tensors", (None,))
         if weight is None:
             return None, None, None, None, None
-
         if ctx.should_gather and ctx.world_size > 1 and ctx.local_rows is not None:
             rows_sizes = getattr(ctx, "rows_sizes", None)
             if rows_sizes is not None:
@@ -1032,8 +1007,6 @@ def enable_part_a_kernel():
             grad_local = grad_output[..., offset : offset + ctx.local_rows]
             grad_A = torch.nn.functional.linear(grad_local, weight.t())
             dist.all_reduce(grad_A)
-            if _DEBUG_PARTA and ctx.rank == 0:
-                print(f"[PARTA DEBUG] bwd row-reduce axis=row offset={offset} local_rows={ctx.local_rows} grad_local_shape={tuple(grad_local.shape)} grad_A_shape={tuple(grad_A.shape)}", flush=True)
         elif getattr(ctx, "should_reduce", False) and ctx.world_size > 1:
             local_cols = ctx.local_cols or (weight.shape[1] if weight.dim() == 2 else grad_output.shape[-1])
             cols_tensor = torch.tensor([local_cols], device=grad_output.device, dtype=torch.int64)
@@ -1047,25 +1020,64 @@ def enable_part_a_kernel():
                 pad_cols = max_cols - local_cols
                 grad_slice = torch.nn.functional.pad(grad_slice, (0, pad_cols))
 
-            send_elems = torch.tensor([grad_slice.numel()], device=grad_slice.device, dtype=torch.int64)
-            send_elems_list = [torch.zeros_like(send_elems) for _ in range(ctx.world_size)]
-            dist.all_gather(send_elems_list, send_elems)
-            if max(send_e.item() for send_e in send_elems_list) != min(send_e.item() for send_e in send_elems_list):
-                if ctx.rank == 0:
-                    print(f"[PARTA DEBUG] col-gather numel mismatch per rank: {[int(x.item()) for x in send_elems_list]}", flush=True)
-                raise RuntimeError("Col gather numel mismatch across ranks")
-
             gathered = [torch.empty_like(grad_slice) for _ in range(ctx.world_size)]
             dist.all_gather(gathered, grad_slice)
             grad_A = torch.cat(gathered, dim=-1)
             if total_cols > 0 and grad_A.shape[-1] > total_cols:
                 grad_A = grad_A[..., : total_cols]
-            if _DEBUG_PARTA and ctx.rank == 0:
-                print(f"[PARTA DEBUG] bwd col-gather axis=col total_cols={total_cols} local_cols={local_cols} grad_slice_shape={tuple(grad_slice.shape)} grad_A_shape={tuple(grad_A.shape)}", flush=True)
         else:
             grad_A = torch.nn.functional.linear(grad_output, weight.t())
         return grad_A, None, None, None, None
 
+    bnb_autograd.MatMul4Bit.forward = _patched_matmul_forward
+    bnb_autograd.MatMul4Bit.backward = _patched_matmul_backward
+
+    _USE_PART_A_KERNEL = True
+    print("Part A kernel ENABLED for NF4 dequantization")
+
+
+def disable_part_a_kernel():
+    """Disable Part A kernel, use original BnB."""
+    global _ORIGINAL_BNB_DEQUANT, _USE_PART_A_KERNEL
+    import bitsandbytes.functional as bnb_F
+
+    if _ORIGINAL_BNB_DEQUANT is not None:
+        bnb_F.dequantize_4bit = _ORIGINAL_BNB_DEQUANT
+    _USE_PART_A_KERNEL = False
+    print("Part A kernel DISABLED, using BnB")
+
+
+def get_dequant_stats():
+    """Get dequantization timing statistics."""
+    return _DEQUANT_TIMES.copy()
+
+
+def reset_dequant_stats():
+    """Reset dequantization timing statistics."""
+    global _DEQUANT_TIMES
+    _DEQUANT_TIMES = {"part_a": 0.0, "bnb": 0.0, "count": 0, "part_a_calls": 0, "bnb_calls": 0, "fallback_calls": 0}
+
+
+# ============================================================================
+# Training Code
+# ============================================================================
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="FSDP2 + QLoRA Training with Part A Kernel")
+    parser.add_argument("--model_name", type=str, default="meta-llama/Llama-3.1-8B-Instruct")
+    parser.add_argument("--max_seq_length", type=int, default=2048)
+    parser.add_argument("--max_steps", type=int, default=60)
+    parser.add_argument("--per_device_train_batch_size", type=int, default=2)
+    parser.add_argument("--gradient_accumulation_steps", type=int, default=4)
+    parser.add_argument("--output_dir", type=str, default="outputs_fsdp2")
+    parser.add_argument("--use_gradient_checkpointing", action="store_true", default=True)
+    parser.add_argument("--use_torch_compile", action="store_true")
+    parser.add_argument("--use_part_a_kernel", action="store_true", help="Use Part A NF4 kernel")
+    parser.add_argument("--benchmark_kernel", action="store_true", help="Benchmark Part A vs BnB")
+    return parser.parse_args()
+
+
+def get_bnb_config(compute_dtype=torch.float16):
     bnb_autograd.MatMul4Bit.forward = _patched_matmul_forward
     bnb_autograd.MatMul4Bit.backward = _patched_matmul_backward
 
