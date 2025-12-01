@@ -1,0 +1,8 @@
+## description of what was run, for what purpose
+Modal A100 flex-attention smoke using unified_attention (torch 2.5.1+cu121). Verifies flex backend selection and gradient path.
+
+### command
+source .venv/bin/activate && cd unsloth && modal run modal_attention_flash_ampere.py::flex_smoke
+
+### output
+{'backend': 'flex', 'out_shape': (1, 8, 512, 64), 'q_grad': 0.267578125}

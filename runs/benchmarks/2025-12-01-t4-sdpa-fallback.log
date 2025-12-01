@@ -1,0 +1,8 @@
+## description of what was run, for what purpose
+Modal T4 smoke to confirm flash-attn is disabled and unified attention falls back to SDPA/xformers on SM75.
+
+### command
+source .venv/bin/activate && cd unsloth && modal run modal_attention_t4_sdpa.py
+
+### output
+{'caps': Capabilities(has_flash_attn=False, has_xformers=False, has_flex=True, supports_sdpa=True, compute_capability=(7, 5), torch_version='2.5.1+cu121'), 'backend': 'sdpa'}
