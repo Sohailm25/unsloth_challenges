@@ -1,0 +1,8 @@
+## description of what was run, for what purpose
+Modal A100 performance check (with warmup) comparing flash-attn2 vs SDPA using unified attention dispatcher (torch 2.5.1+cu121, flash-attn 2.8.3 cp310) via modal_attention_flash_ampere.py::perf after adding warmup.
+
+### command
+source .venv/bin/activate && cd unsloth && modal run modal_attention_flash_ampere.py::perf
+
+### output
+{'caps': Capabilities(has_flash_attn=True, has_xformers=False, has_flex=True, supports_sdpa=True, compute_capability=(8, 0), torch_version='2.5.1+cu121'), 'flash_selected': 'flash_attn_2', 'flash_meta': 'flash_attn_2', 'sdpa_selected': 'sdpa', 'sdpa_meta': 'sdpa', 'flash_time_s': 0.002840757369995117, 'sdpa_time_s': 0.0019829273223876953}
