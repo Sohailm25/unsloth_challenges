@@ -288,6 +288,11 @@ def run_part_a_kernel_training(
     disable_gather: bool = False,
     disable_scatter: bool = False,
     enable_gather_cache: bool = False,
+    enable_sharded_parta: bool = False,
+    model_name=None,
+    per_device_train_batch_size: int = 2,
+    max_seq_length=None,
+    tiny_sanity: bool = False,
 ):
     """Run FSDP2 + QLoRA training with Part A NF4 kernel."""
     import subprocess
@@ -320,10 +325,17 @@ def run_part_a_kernel_training(
         "--max_steps", str(max_steps),
         "--use_gradient_checkpointing",
     ]
+    if model_name:
+        cmd += ["--model_name", model_name]
+    if max_seq_length is not None:
+        cmd += ["--max_seq_length", str(max_seq_length)]
+    cmd += ["--per_device_train_batch_size", str(per_device_train_batch_size)]
     if use_part_a:
         cmd.append("--use_part_a_kernel")
     if use_torch_compile:
         cmd.append("--use_torch_compile")
+    if tiny_sanity:
+        cmd.append("--tiny_sanity")
 
     env = {**os.environ, "HF_HUB_ENABLE_HF_TRANSFER": "1"}
     if disable_reacquire:
@@ -334,6 +346,10 @@ def run_part_a_kernel_training(
         env["ORACLE_PARTA_SCATTER_FALLBACK"] = "0"
     if enable_gather_cache:
         env["ORACLE_PARTA_GATHER_CACHE"] = "1"
+    if enable_sharded_parta or use_part_a:
+        env["ORACLE_PARTA_SHARDED"] = "1"
+    if tiny_sanity:
+        env["ORACLE_PARTA_TINY"] = "1"
 
     if use_part_a:
         print("Part A env toggles:",
@@ -341,6 +357,7 @@ def run_part_a_kernel_training(
               f"gather={'off' if disable_gather else 'on'}",
               f"scatter={'off' if disable_scatter else 'on'}",
               f"gather_cache={'on' if enable_gather_cache else 'off'}",
+              f"sharded_parta={'on' if enable_sharded_parta else 'off'}",
               sep=" | ")
 
     print(f"\nRunning command: {' '.join(cmd)}\n")
@@ -363,10 +380,14 @@ def main(
     compile: bool = False,
     part_a: bool = False,
     max_steps: int = 60,
+    model_name=None,
+    per_device_train_batch_size: int = 2,
+    max_seq_length=None,
     disable_reacquire: bool = False,
     disable_gather: bool = False,
     disable_scatter: bool = False,
     enable_gather_cache: bool = False,
+    enable_sharded_parta: bool = False,
 ):
     """
     Run Challenge B FSDP + QLoRA training.
@@ -398,6 +419,11 @@ def main(
             disable_gather=disable_gather,
             disable_scatter=disable_scatter,
             enable_gather_cache=enable_gather_cache,
+            enable_sharded_parta=enable_sharded_parta,
+            model_name=model_name,
+            per_device_train_batch_size=per_device_train_batch_size,
+            max_seq_length=max_seq_length,
+            tiny_sanity=tiny_sanity,
         )
         compile_str = " + torch.compile" if compile else ""
         print(f"FSDP2 + Part A kernel{compile_str} training completed with return code: {returncode}")
