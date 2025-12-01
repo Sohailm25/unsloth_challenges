@@ -7,6 +7,8 @@ Usage (torch 2.9 image recommended for vision models):
 - LLaVA 1.5 7B: modal run modal_gguf_vlm_export.py::run_torch29 --model-id llava-hf/llava-1.5-7b-hf
 Outputs: BF16 text GGUF, BF16 mmproj GGUF, and Q8_0 quantized GGUF. Use with llama-mtmd-cli, e.g.:
   llama-mtmd-cli -m llava-1.5-7b-hf.Q8_0.gguf --mmproj llava-1.5-7b-hf.BF16-mmproj.gguf
+
+TorchAO stub (safety): enable with TRANSFORMERS_DISABLE_TORCHAO=1 (default in this helper). It only suppresses import-time torchao failures; do not rely on torchao features when enabled.
 """
 
 from modal import App, Image
@@ -65,31 +67,45 @@ image_torch29 = (
     )
 )
 
+def _maybe_disable_torchao():
+    import os
+    import sys
+    import types
+
+    flag = os.environ.get("TRANSFORMERS_DISABLE_TORCHAO", "1")
+    if flag not in {"1", "true", "TRUE", "True"}:
+        return
+
+    ta = sys.modules.get("torchao") or types.ModuleType("torchao")
+    qa = sys.modules.get("torchao.quantization") or types.ModuleType("torchao.quantization")
+    da = sys.modules.get("torchao.dtypes") or types.ModuleType("torchao.dtypes")
+    ta.quantization = qa
+    ta.dtypes = da
+    sys.modules.update(
+        {
+            "torchao": ta,
+            "torchao.quantization": qa,
+            "torchao.dtypes": da,
+        }
+    )
+    if "torch._inductor.custom_graph_pass" not in sys.modules:
+        sys.modules["torch._inductor.custom_graph_pass"] = types.ModuleType(
+            "torch._inductor.custom_graph_pass"
+        )
+    print("[modal_gguf_vlm_export] torchao disabled via stub (TRANSFORMERS_DISABLE_TORCHAO=1)", file=sys.stderr)
+
 
 @stub.function(image=image, gpu="A10G", timeout=60 * 60)
 def run(model_id: str = "Qwen/Qwen2-VL-2B-Instruct"):
     import os
     import subprocess
     import sys
-    import types
 
     os.environ["HF_NO_TORCHAO"] = "1"
     os.environ["TRANSFORMERS_NO_TORCHAO"] = "1"
     os.environ.setdefault("TRANSFORMERS_DISABLE_TORCHAO", "1")
 
-    if os.environ.get("TRANSFORMERS_DISABLE_TORCHAO", "0") == "1":
-        ta = sys.modules.get("torchao") or types.ModuleType("torchao")
-        qa = sys.modules.get("torchao.quantization") or types.ModuleType("torchao.quantization")
-        da = sys.modules.get("torchao.dtypes") or types.ModuleType("torchao.dtypes")
-        ta.quantization = qa
-        ta.dtypes = da
-        sys.modules.update({
-            "torchao": ta,
-            "torchao.quantization": qa,
-            "torchao.dtypes": da,
-        })
-        if "torch._inductor.custom_graph_pass" not in sys.modules:
-            sys.modules["torch._inductor.custom_graph_pass"] = types.ModuleType("torch._inductor.custom_graph_pass")
+    _maybe_disable_torchao()
 
     # Install local unsloth in editable mode so our branch code is used.
     subprocess.run(["pip", "install", "-e", "/workspace/unsloth"], check=True)
@@ -150,25 +166,12 @@ def run_torch29(model_id: str = "Qwen/Qwen-VL"):
     import os
     import subprocess
     import sys
-    import types
 
     os.environ["HF_NO_TORCHAO"] = "1"
     os.environ["TRANSFORMERS_NO_TORCHAO"] = "1"
     os.environ.setdefault("TRANSFORMERS_DISABLE_TORCHAO", "1")
 
-    if os.environ.get("TRANSFORMERS_DISABLE_TORCHAO", "0") == "1":
-        ta = sys.modules.get("torchao") or types.ModuleType("torchao")
-        qa = sys.modules.get("torchao.quantization") or types.ModuleType("torchao.quantization")
-        da = sys.modules.get("torchao.dtypes") or types.ModuleType("torchao.dtypes")
-        ta.quantization = qa
-        ta.dtypes = da
-        sys.modules.update({
-            "torchao": ta,
-            "torchao.quantization": qa,
-            "torchao.dtypes": da,
-        })
-        if "torch._inductor.custom_graph_pass" not in sys.modules:
-            sys.modules["torch._inductor.custom_graph_pass"] = types.ModuleType("torch._inductor.custom_graph_pass")
+    _maybe_disable_torchao()
 
     subprocess.run(["pip", "install", "-e", "/workspace/unsloth"], check=True)
     sys.path.insert(0, "/workspace/unsloth")
