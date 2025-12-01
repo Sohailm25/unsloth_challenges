@@ -1,0 +1,8 @@
+## description of what was run, for what purpose
+Modal A100 model-level attention smoke using unified_attention with FA2 expected (torch 2.5.1+cu121, flash-attn 2.8.3 cp310). Simulates model call with B=2, H=32, S=1024 and backprop.
+
+### command
+source .venv/bin/activate && cd unsloth && modal run modal_attention_flash_ampere.py::model_smoke
+
+### output
+{'backend': 'flash_attn_2', 'out_shape': (2, 32, 1024, 64), 'q_grad': 0.07073974609375}
