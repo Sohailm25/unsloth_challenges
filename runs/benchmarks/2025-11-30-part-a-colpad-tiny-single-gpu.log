@@ -87,3 +87,5 @@ The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and g
 [SHIFT DEBUG] blocksize=64, bytes_per_absmax=32
 [SHIFT DEBUG] blocksize2=256
 [SHIFT DEBUG] Success! shifts=(5, 8)
+
+RESULT: hung at step0; manual stop; includes NCCL recv warnings when stopping app.

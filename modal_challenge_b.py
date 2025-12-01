@@ -293,6 +293,7 @@ def run_part_a_kernel_training(
     per_device_train_batch_size: int = 2,
     max_seq_length=None,
     tiny_sanity: bool = False,
+    tiny_single_gpu: bool = False,
 ):
     """Run FSDP2 + QLoRA training with Part A NF4 kernel."""
     import subprocess
@@ -336,6 +337,8 @@ def run_part_a_kernel_training(
         cmd.append("--use_torch_compile")
     if tiny_sanity:
         cmd.append("--tiny_sanity")
+    if tiny_single_gpu:
+        cmd.append("--tiny_single_gpu")
 
     env = {**os.environ, "HF_HUB_ENABLE_HF_TRANSFER": "1"}
     if disable_reacquire:
@@ -350,6 +353,9 @@ def run_part_a_kernel_training(
         env["ORACLE_PARTA_SHARDED"] = "1"
     if tiny_sanity:
         env["ORACLE_PARTA_TINY"] = "1"
+    if tiny_single_gpu:
+        env["CUDA_VISIBLE_DEVICES"] = "0"
+        env["ACCELERATE_USE_FSDP"] = "0"
 
     if use_part_a:
         print("Part A env toggles:",
@@ -424,6 +430,7 @@ def main(
             per_device_train_batch_size=per_device_train_batch_size,
             max_seq_length=max_seq_length,
             tiny_sanity=tiny_sanity,
+            tiny_single_gpu=tiny_single_gpu,
         )
         compile_str = " + torch.compile" if compile else ""
         print(f"FSDP2 + Part A kernel{compile_str} training completed with return code: {returncode}")
